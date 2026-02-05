@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Processing System - Data Flow Diagram</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 1200px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #718096;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .diagram {
+            position: relative;
+            width: 100%;
+            height: 800px;
+            background: #f7fafc;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+            overflow: hidden;
+        }
+        
+        .flow-stage {
+            position: absolute;
+            width: 180px;
+            text-align: center;
+        }
+        
+        .stage-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            border: 3px solid;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .stage-circle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+        }
+        
+        .stage-title {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+        
+        .stage-desc {
+            font-size: 12px;
+            color: #4a5568;
+            line-height: 1.4;
+            padding: 0 10px;
+        }
+        
+        .process-box {
+            position: absolute;
+            background: white;
+            border: 2px solid #805ad5;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .process-box:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 10px rgba(0,0,0,0.15);
+            border-color: #6b46c1;
+        }
+        
+        .process-title {
+            font-weight: 600;
+            color: #553c9a;
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+        
+        .process-detail {
+            font-size: 11px;
+            color: #4a5568;
+            line-height: 1.4;
+        }
+        
+        svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .flow-arrow {
+            stroke: #4299e1;
+            stroke-width: 3;
+            fill: none;
+            marker-end: url(#arrowhead-flow);
+        }
+        
+        .error-arrow {
+            stroke: #f56565;
+            stroke-width: 2;
+            fill: none;
+            stroke-dasharray: 6,4;
+            marker-end: url(#arrowhead-error);
+        }
+        
+        .arrow-label {
+            font-size: 12px;
+            fill: #2d3748;
+            font-weight: 600;
+        }
+        
+        .data-label {
+            font-size: 11px;
+            fill: #4a5568;
+            font-style: italic;
+        }
+        
+        .detection { border-color: #48bb78; }
+        .queued { border-color: #ed8936; }
+        .processing { border-color: #4299e1; }
+        .completion { border-color: #9f7aea; }
+        .error { border-color: #f56565; }
+        
+        .note {
+            margin-top: 25px;
+            padding: 15px;
+            background: #edf2f7;
+            border-left: 4px solid #4299e1;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #2d3748;
+            line-height: 1.6;
+        }
+        
+        .note strong {
+            color: #2b6cb0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Media Processing Pipeline</h1>
+        <p class="subtitle">Data Flow Diagram - From Detection to Completion</p>
+        
+        <div class="diagram">
+            <svg>
+                <defs>
+                    <marker id="arrowhead-flow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#4299e1" />
+                    </marker>
+                    <marker id="arrowhead-error" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#f56565" />
+                    </marker>
+                </defs>
+                
+                <!-- Main flow arrows -->
+                <path class="flow-arrow" d="M 100 120 L 100 220" />
+                <text class="arrow-label" x="105" y="175">detect</text>
+                
+                <path class="flow-arrow" d="M 100 360 L 100 440" />
+                <text class="arrow-label" x="105" y="405">queue</text>
+                
+                <path class="flow-arrow" d="M 190 500 L 400 500" />
+                <text class="arrow-label" x="270" y="495">dequeue</text>
+                
+                <path class="flow-arrow" d="M 590 500 L 800 500" />
+                <text class="arrow-label" x="670" y="495">process</text>
+                
+                <path class="flow-arrow" d="M 940 440 L 940 360" />
+                <text class="arrow-label" x="945" y="405">finalize</text>
+                
+                <!-- Data labels on main flow -->
+                <text class="data-label" x="105" y="190">file metadata</text>
+                <text class="data-label" x="105" y="420">job record</text>
+                <text class="data-label" x="270" y="510">job + config</text>
+                <text class="data-label" x="670" y="510">media data</text>
+                <text class="data-label" x="945" y="420">results</text>
+                
+                <!-- Error/retry paths -->
+                <path class="error-arrow" d="M 800 560 L 700 600 L 550 600 L 550 540" />
+                <text class="data-label" x="630" y="595" fill="#f56565">error → retry</text>
+                
+                <path class="error-arrow" d="M 800 440 L 750 380 L 550 380 L 550 440" />
+                <text class="data-label" x="630" y="375" fill="#f56565">failure → requeue</text>
+                
+                <!-- State update arrows -->
+                <path class="flow-arrow" d="M 180 290 L 330 360" stroke-width="2" opacity="0.5" />
+                <path class="flow-arrow" d="M 180 500 L 330 500" stroke-width="2" opacity="0.5" />
+                <path class="flow-arrow" d="M 710 500 L 860 360" stroke-width="2" opacity="0.5" />
+                <text class="data-label" x="250" y="330" opacity="0.7">state update</text>
+                <text class="data-label" x="200" y="495" opacity="0.7">state update</text>
+                <text class="data-label" x="760" y="440" opacity="0.7">state update</text>
+            </svg>
+            
+            <!-- Stage 1: Detection -->
+            <div class="flow-stage" style="top: 20px; left: 20px;">
+                <div class="stage-circle detection">📁</div>
+                <div class="stage-title">1. Detection</div>
+                <div class="stage-desc">New media discovered in monitored location</div>
+            </div>
+            
+            <!-- Stage 2: Job Creation -->
+            <div class="flow-stage" style="top: 225px; left: 20px;">
+                <div class="stage-circle queued">📝</div>
+                <div class="stage-title">2. Job Creation</div>
+                <div class="stage-desc">Job record created with initial state</div>
+            </div>
+            
+            <!-- State Database (referenced multiple times) -->
+            <div class="process-box" style="top: 235px; left: 330px; width: 200px; border-color: #ed8936; background: #fffaf0;">
+                <div class="process-title">💾 State Database</div>
+                <div class="process-detail">Persistent job state:<br>• queued → processing<br>• processing → complete<br>• processing → failed</div>
+            </div>
+            
+            <!-- Stage 3: Queue -->
+            <div class="flow-stage" style="top: 425px; left: 20px;">
+                <div class="stage-circle queued">📋</div>
+                <div class="stage-title">3. Queue</div>
+                <div class="stage-desc">Job waits in processing queue</div>
+            </div>
+            
+            <!-- Stage 4: Processing -->
+            <div class="flow-stage" style="top: 425px; left: 400px;">
+                <div class="stage-circle processing">⚙️</div>
+                <div class="stage-title">4. Processing</div>
+                <div class="stage-desc">Workflow execution begins</div>
+            </div>
+            
+            <!-- Processing Steps -->
+            <div class="process-box" style="top: 590px; left: 390px; width: 180px;">
+                <div class="process-title">Processing Steps</div>
+                <div class="process-detail">1. Validation<br>2. Ripping/Extraction<br>3. Conversion<br>4. Quality check<br>5. Metadata tagging</div>
+            </div>
+            
+            <!-- Stage 5: Execution -->
+            <div class="flow-stage" style="top: 425px; left: 800px;">
+                <div class="stage-circle processing">🔧</div>
+                <div class="stage-title">5. Execution</div>
+                <div class="stage-desc">External tools invoked, output generated</div>
+            </div>
+            
+            <!-- Stage 6: Completion -->
+            <div class="flow-stage" style="top: 225px; left: 860px;">
+                <div class="stage-circle completion">✅</div>
+                <div class="stage-title">6. Completion</div>
+                <div class="stage-desc">Results stored, state finalized</div>
+            </div>
+            
+            <!-- Error Handling Box -->
+            <div class="process-box" style="top: 50px; left: 650px; width: 200px; border-color: #f56565; background: #fff5f5;">
+                <div class="process-title">🔄 Error Handling</div>
+                <div class="process-detail">On failure:<br>• Log error details<br>• Attempt retry (if configured)<br>• Mark failed if exhausted</div>
+            </div>
+            
+            <!-- Output -->
+            <div class="process-box" style="top: 50px; left: 900px; width: 160px; border-color: #48bb78; background: #f0fff4;">
+                <div class="process-title">📤 Output</div>
+                <div class="process-detail">• Processed media<br>• Logs & reports<br>• Metadata files</div>
+            </div>
+        </div>
+        
+        <div class="note">
+            <strong>Key Data Flows:</strong> Media files trigger detection, which creates job records persisted to the database. Jobs move through the queue to the processing engine, where they execute a sequence of steps using external tools. State updates are recorded at each transition. Failed jobs can be retried or requeued based on error handling rules. Completed jobs produce output files and final state records.
+        </div>
+    </div>
+</body>
+</html>

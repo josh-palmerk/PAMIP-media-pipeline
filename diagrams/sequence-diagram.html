@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Processing System - Sequence Diagram</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 1400px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #718096;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .diagram {
+            position: relative;
+            width: 100%;
+            height: 1100px;
+            background: #f7fafc;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+            overflow-x: auto;
+        }
+        
+        .actor {
+            position: absolute;
+            top: 20px;
+            text-align: center;
+            width: 100px;
+        }
+        
+        .actor-box {
+            background: white;
+            border: 2px solid #4299e1;
+            border-radius: 8px;
+            padding: 12px 8px;
+            margin-bottom: 10px;
+            font-weight: 600;
+            font-size: 13px;
+            color: #2d3748;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .actor-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .lifeline {
+            position: absolute;
+            width: 2px;
+            background: #cbd5e0;
+            top: 80px;
+            height: 1000px;
+        }
+        
+        .activation {
+            position: absolute;
+            width: 12px;
+            background: #4299e1;
+            border: 1px solid #2b6cb0;
+            z-index: 2;
+        }
+        
+        svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .message-arrow {
+            stroke: #2d3748;
+            stroke-width: 2;
+            fill: none;
+            marker-end: url(#arrowhead);
+        }
+        
+        .return-arrow {
+            stroke: #718096;
+            stroke-width: 1.5;
+            fill: none;
+            stroke-dasharray: 5,3;
+            marker-end: url(#arrowhead-return);
+        }
+        
+        .self-call {
+            stroke: #2d3748;
+            stroke-width: 2;
+            fill: none;
+            marker-end: url(#arrowhead);
+        }
+        
+        .message-label {
+            font-size: 12px;
+            fill: #2d3748;
+            font-weight: 500;
+        }
+        
+        .sequence-number {
+            font-size: 11px;
+            fill: white;
+            font-weight: 700;
+        }
+        
+        .note {
+            position: absolute;
+            background: #fef5e7;
+            border: 2px solid #f39c12;
+            border-radius: 4px;
+            padding: 10px;
+            font-size: 11px;
+            color: #2d3748;
+            max-width: 200px;
+            line-height: 1.4;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 3;
+        }
+        
+        .note::before {
+            content: "📝 ";
+            font-size: 14px;
+        }
+        
+        .error-note {
+            background: #fadbd8;
+            border-color: #e74c3c;
+        }
+        
+        .error-note::before {
+            content: "⚠️ ";
+        }
+        
+        .success-note {
+            background: #d5f4e6;
+            border-color: #27ae60;
+        }
+        
+        .success-note::before {
+            content: "✅ ";
+        }
+        
+        .step-marker {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4299e1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: white;
+            z-index: 4;
+        }
+        
+        .legend {
+            margin-top: 30px;
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            font-size: 13px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .legend-line {
+            width: 40px;
+            height: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Media Processing Sequence</h1>
+        <p class="subtitle">Step-by-Step Flow: New Media Detection → Successful Processing</p>
+        
+        <div class="diagram">
+            <svg>
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#2d3748" />
+                    </marker>
+                    <marker id="arrowhead-return" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#718096" />
+                    </marker>
+                </defs>
+                
+                <!-- 1. File added -->
+                <path class="message-arrow" d="M 60 110 L 210 110" />
+                <text class="message-label" x="75" y="105">1: file added to watched folder</text>
+                
+                <!-- 2. Poll/detect -->
+                <path class="message-arrow" d="M 260 145 L 410 145" />
+                <text class="message-label" x="280" y="140">2: poll()</text>
+                
+                <!-- 3. File detected -->
+                <path class="return-arrow" d="M 410 165 L 260 165" />
+                <text class="message-label" x="285" y="180">3: new file detected</text>
+                
+                <!-- 4. Create MediaFile -->
+                <path class="message-arrow" d="M 260 200 L 560 200" />
+                <text class="message-label" x="320" y="195">4: createMediaFile(path)</text>
+                
+                <!-- 5. Return MediaFile -->
+                <path class="return-arrow" d="M 560 220 L 260 220" />
+                <text class="message-label" x="330" y="235">5: mediaFile</text>
+                
+                <!-- 6. Create Job -->
+                <path class="message-arrow" d="M 260 255 L 710 255" />
+                <text class="message-label" x="400" y="250">6: createJob(mediaFile)</text>
+                
+                <!-- 7. Instantiate Job -->
+                <path class="message-arrow" d="M 760 285 L 910 285" />
+                <text class="message-label" x="780" y="280">7: new Job()</text>
+                
+                <!-- 8. Return Job -->
+                <path class="return-arrow" d="M 910 305 L 760 305" />
+                <text class="message-label" x="800" y="320">8: job</text>
+                
+                <!-- 9. Save state -->
+                <path class="message-arrow" d="M 760 340 L 1060 340" />
+                <text class="message-label" x="830" y="335">9: saveJob(job, QUEUED)</text>
+                
+                <!-- 10. Persist -->
+                <path class="message-arrow" d="M 1110 370 L 1260 370" />
+                <text class="message-label" x="1125" y="365">10: INSERT</text>
+                
+                <!-- 11. Return success -->
+                <path class="return-arrow" d="M 1260 390 L 1110 390" />
+                <text class="message-label" x="1140" y="405">11: success</text>
+                
+                <!-- 12. Return to JobManager -->
+                <path class="return-arrow" d="M 1060 420 L 760 420" />
+                
+                <!-- 13. Enqueue -->
+                <path class="message-arrow" d="M 760 455 L 760 490" />
+                <text class="message-label" x="765" y="475">13: enqueue(job)</text>
+                
+                <!-- 14. Return -->
+                <path class="return-arrow" d="M 710 520 L 260 520" />
+                <text class="message-label" x="400" y="535">14: job created</text>
+                
+                <!-- Processing begins -->
+                
+                <!-- 15. Dequeue -->
+                <path class="message-arrow" d="M 260 570 L 710 570" />
+                <text class="message-label" x="380" y="565">15: dequeue()</text>
+                
+                <!-- 16. Return job -->
+                <path class="return-arrow" d="M 710 590 L 260 590" />
+                <text class="message-label" x="400" y="605">16: job</text>
+                
+                <!-- 17. Execute -->
+                <path class="message-arrow" d="M 260 625 L 410 625" />
+                <text class="message-label" x="280" y="620">17: execute(job)</text>
+                
+                <!-- 18. Validate -->
+                <path class="message-arrow" d="M 460 660 L 560 660" />
+                <text class="message-label" x="475" y="655">18: validate()</text>
+                
+                <!-- 19. Valid -->
+                <path class="return-arrow" d="M 560 680 L 460 680" />
+                <text class="message-label" x="480" y="695">19: true</text>
+                
+                <!-- 20. Update state -->
+                <path class="message-arrow" d="M 460 715 L 1060 715" />
+                <text class="message-label" x="640" y="710">20: updateState(PROCESSING)</text>
+                
+                <!-- 21. Get processor -->
+                <path class="self-call" d="M 460 750 Q 520 750 520 785 Q 520 820 460 820" />
+                <text class="message-label" x="525" y="790">21: getProcessor(type)</text>
+                
+                <!-- 22. Process -->
+                <path class="message-arrow" d="M 460 855 L 1260 855" />
+                <text class="message-label" x="720" y="850">22: process(mediaFile)</text>
+                
+                <!-- 23. Invoke tool -->
+                <path class="self-call" d="M 1310 885 Q 1370 885 1370 915 Q 1370 945 1310 945" />
+                <text class="message-label" x="1375" y="915">23: execute()</text>
+                
+                <!-- 24. Return output -->
+                <path class="return-arrow" d="M 1260 975 L 460 975" />
+                <text class="message-label" x="740" y="970">24: processedFile</text>
+                
+                <!-- 25. Update state executing -->
+                <path class="message-arrow" d="M 460 1010 L 1060 1010" />
+                <text class="message-label" x="640" y="1005">25: updateState(FINALIZING)</text>
+                
+                <!-- 26. Return to FileWatcher -->
+                <path class="return-arrow" d="M 410 1045 L 260 1045" />
+                <text class="message-label" x="280" y="1060">26: success</text>
+            </svg>
+            
+            <!-- Actors -->
+            <div class="actor" style="left: 10px;">
+                <div class="actor-box">
+                    <div class="actor-icon">📂</div>
+                    User/System
+                </div>
+                <div class="lifeline" style="left: 49px;"></div>
+            </div>
+            
+            <div class="actor" style="left: 210px;">
+                <div class="actor-box">
+                    <div class="actor-icon">👁️</div>
+                    FileWatcher
+                </div>
+                <div class="lifeline" style="left: 49px;"></div>
+                <div class="activation" style="left: 255px; top: 135px; height: 920px;"></div>
+            </div>
+            
+            <div class="actor" style="left: 510px;">
+                <div class="actor-box">
+                    <div class="actor-icon">📁</div>
+                    MediaFile
+                </div>
+                <div class="lifeline" style="left: 49px;"></div>
+                <div class="activation" style="left: 555px; top: 200px; height: 40px;"></div>
+            </div>
+            
+            <div class="actor" style="left: 660px;">
+                <div class="actor-box">
+                    <div class="actor-icon">⚙️</div>
+                    JobManager
+                </div>
+                <div class="lifeline" style="left: 49px;"></div>
+                <div class="activation" style="left: 705px; top: 255px; height: 280px;"></div>
+                <div class="activation" style="left: 705px; top: 570px; height: 500px;"></div>
+            </div>
+            
+            <div class="actor" style="left: 860px;">
+                <div class="actor-box">
+                    <div class="actor-icon">📄</div>
+                    Job
+                </div>
+                <div class="lifeline" style="left: 49px;"></div>
+                <div class="activation" style="left: 905px; top: 285px; height: 40px;"></div>
+            </div>
+            
+            <div class="actor" style="left: 1010px;">
+                <div class="actor-box">
+                    <div class="actor-icon">💾</div>
+                    StateManager
+                </div>
+                <div class="lifeline" style="left: 49px;"></div>
+                <div class="activation" style="left: 1055px; top: 340px; height: 95px;"></div>
+                <div class="activation" style="left: 1055px; top: 715px; height: 30px;"></div>
+                <div class="activation" style="left: 1055px; top: 1010px; height: 30px;"></div>
+            </div>
+            
+            <div class="actor" style="left: 1210px;">
+                <div class="actor-box">
+                    <div class="actor-icon">🗄️</div>
+                    Database
+                </div>
+                <div class="lifeline" style="left: 49px;"></div>
+                <div class="activation" style="left: 1255px; top: 370px; height: 35px;"></div>
+            </div>
+            
+            <div class="actor" style="left: 360px;">
+                <div class="actor-box">
+                    <div class="actor-icon">🔧</div>
+                    ProcessingEngine
+                </div>
+                <div class="lifeline" style="left: 49px;"></div>
+                <div class="activation" style="left: 405px; top: 625px; height: 450px;"></div>
+            </div>
+            
+            <div class="actor" style="left: 1260px;">
+                <div class="actor-box">
+                    <div class="actor-icon">🛠️</div>
+                    ExternalTool
+                </div>
+                <div class="lifeline" style="left: 49px;"></div>
+                <div class="activation" style="left: 1305px; top: 855px; height: 135px;"></div>
+            </div>
+            
+            <!-- Notes -->
+            <div class="note" style="top: 240px; left: 870px;">
+                Job is created with state QUEUED and initial metadata
+            </div>
+            
+            <div class="note" style="top: 430px; left: 850px;">
+                Job enters the processing queue, waiting for available resources
+            </div>
+            
+            <div class="note success-note" style="top: 670px; left: 600px;">
+                File validation checks format, integrity, and accessibility
+            </div>
+            
+            <div class="note" style="top: 925px; left: 1100px;">
+                External tools (FFmpeg, HandBrake, etc.) perform actual media processing
+            </div>
+            
+            <!-- Step markers -->
+            <div class="step-marker" style="top: 100px; left: 130px;">1</div>
+            <div class="step-marker" style="top: 135px; left: 330px;">2</div>
+            <div class="step-marker" style="top: 190px; left: 380px;">4</div>
+            <div class="step-marker" style="top: 245px; left: 480px;">6</div>
+            <div class="step-marker" style="top: 560px; left: 480px;">15</div>
+            <div class="step-marker" style="top: 615px; left: 330px;">17</div>
+            <div class="step-marker" style="top: 845px; left: 840px;">22</div>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-line" style="background: #2d3748;"></div>
+                <span>Synchronous call</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="background: transparent; border-top: 2px dashed #718096;"></div>
+                <span>Return value</span>
+            </div>
+            <div class="legend-item">
+                <div style="width: 12px; height: 40px; background: #4299e1; border: 1px solid #2b6cb0;"></div>
+                <span>Active execution</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

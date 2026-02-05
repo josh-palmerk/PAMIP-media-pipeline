@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Processing System - All Diagrams</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a202c;
+            color: white;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #a0aec0;
+            font-size: 16px;
+        }
+        
+        .diagram-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .diagram-card {
+            background: #2d3748;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .diagram-card:hover {
+            transform: translateY(-4px);
+            border-color: #4299e1;
+            box-shadow: 0 8px 16px rgba(66, 153, 225, 0.3);
+        }
+        
+        .diagram-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        
+        .diagram-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .diagram-desc {
+            color: #a0aec0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .instructions {
+            background: #2d3748;
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 30px auto;
+            border-left: 4px solid #4299e1;
+        }
+        
+        .instructions h2 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #4299e1;
+        }
+        
+        .instructions ul {
+            margin-left: 20px;
+            color: #a0aec0;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Media Processing System - Technical Diagrams</h1>
+        <p class="subtitle">Click any diagram to open it in a new tab</p>
+    </div>
+    
+    <div class="diagram-grid">
+        <div class="diagram-card" onclick="window.open('architecture.html', '_blank')">
+            <div class="diagram-icon">🏗️</div>
+            <div class="diagram-title">System Architecture</div>
+            <div class="diagram-desc">Shows all major components and how they connect together</div>
+        </div>
+        
+        <div class="diagram-card" onclick="window.open('dataflow.html', '_blank')">
+            <div class="diagram-icon">🌊</div>
+            <div class="diagram-title">Data Flow</div>
+            <div class="diagram-desc">Maps the journey of media through the entire pipeline</div>
+        </div>
+        
+        <div class="diagram-card" onclick="window.open('state-machine.html', '_blank')">
+            <div class="diagram-icon">⚙️</div>
+            <div class="diagram-title">State Machine</div>
+            <div class="diagram-desc">Job lifecycle states and all possible transitions</div>
+        </div>
+        
+        <div class="diagram-card" onclick="window.open('class-diagram.html', '_blank')">
+            <div class="diagram-icon">📦</div>
+            <div class="diagram-title">Class Diagram</div>
+            <div class="diagram-desc">Object model with classes, attributes, and relationships</div>
+        </div>
+        
+        <div class="diagram-card" onclick="window.open('sequence-diagram.html', '_blank')">
+            <div class="diagram-icon">📊</div>
+            <div class="diagram-title">Sequence Diagram</div>
+            <div class="diagram-desc">Step-by-step flow from detection to completion</div>
+        </div>
+    </div>
+    
+    <div class="instructions">
+        <h2>💡 Viewing Tips</h2>
+        <ul>
+            <li><strong>Optimal viewing:</strong> Use a screen at least 1400px wide, or zoom out in your browser (Ctrl/Cmd + minus key)</li>
+            <li><strong>Browser zoom:</strong> Press Ctrl/Cmd + 0 to reset zoom to 100%, then Ctrl/Cmd + minus to zoom out until the diagram fits</li>
+            <li><strong>Full screen:</strong> Press F11 for full-screen mode in most browsers</li>
+            <li><strong>Mobile/small screens:</strong> The diagrams are best viewed on desktop, but you can pinch-to-zoom on mobile</li>
+            <li><strong>Printing:</strong> Set browser to Landscape mode and adjust scale to fit page</li>
+        </ul>
+    </div>
+</body>
+</html>

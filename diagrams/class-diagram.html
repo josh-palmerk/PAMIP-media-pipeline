@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Processing System - Class Diagram</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 1500px;
+            width: 100%;
+        }
+        
+        h1 {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #718096;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .diagram {
+            position: relative;
+            width: 100%;
+            height: 900px;
+            background: #f7fafc;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .class-box {
+            position: absolute;
+            background: white;
+            border: 2px solid #2d3748;
+            border-radius: 4px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .class-box:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+            border-color: #4299e1;
+        }
+        
+        .class-header {
+            background: #2d3748;
+            color: white;
+            padding: 10px;
+            font-weight: 700;
+            text-align: center;
+            border-radius: 2px 2px 0 0;
+            font-size: 14px;
+        }
+        
+        .class-attributes {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f7fafc;
+        }
+        
+        .class-methods {
+            padding: 12px;
+        }
+        
+        .attribute, .method {
+            margin: 4px 0;
+            color: #2d3748;
+            line-height: 1.5;
+        }
+        
+        .attribute::before {
+            content: "- ";
+            color: #718096;
+        }
+        
+        .method::before {
+            content: "+ ";
+            color: #48bb78;
+        }
+        
+        .interface .class-header {
+            background: #805ad5;
+        }
+        
+        .abstract .class-header {
+            background: #ed8936;
+            font-style: italic;
+        }
+        
+        .enum .class-header {
+            background: #48bb78;
+        }
+        
+        svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .association {
+            stroke: #4a5568;
+            stroke-width: 2;
+            fill: none;
+            marker-end: url(#arrow-association);
+        }
+        
+        .composition {
+            stroke: #2d3748;
+            stroke-width: 2.5;
+            fill: none;
+            marker-end: url(#diamond-composition);
+        }
+        
+        .inheritance {
+            stroke: #4a5568;
+            stroke-width: 2;
+            fill: none;
+            marker-end: url(#arrow-inheritance);
+            stroke-dasharray: none;
+        }
+        
+        .implementation {
+            stroke: #805ad5;
+            stroke-width: 2;
+            fill: none;
+            stroke-dasharray: 6,4;
+            marker-end: url(#arrow-inheritance);
+        }
+        
+        .dependency {
+            stroke: #718096;
+            stroke-width: 1.5;
+            fill: none;
+            stroke-dasharray: 4,3;
+            marker-end: url(#arrow-dependency);
+        }
+        
+        .relationship-label {
+            font-size: 10px;
+            fill: #4a5568;
+            background: white;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .multiplicity {
+            font-size: 10px;
+            fill: #718096;
+            font-weight: 600;
+        }
+        
+        .legend {
+            margin-top: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background: #f7fafc;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        
+        .legend-line {
+            width: 40px;
+            height: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Media Processing System</h1>
+        <p class="subtitle">Class Diagram - Core Object Model</p>
+        
+        <div class="diagram">
+            <svg>
+                <defs>
+                    <marker id="arrow-association" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#4a5568" />
+                    </marker>
+                    <marker id="arrow-inheritance" markerWidth="12" markerHeight="12" refX="0" refY="6" orient="auto">
+                        <polygon points="0 6, 12 0, 12 12" fill="none" stroke="#4a5568" stroke-width="2" />
+                    </marker>
+                    <marker id="arrow-dependency" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#718096" />
+                    </marker>
+                    <marker id="diamond-composition" markerWidth="12" markerHeight="12" refX="12" refY="6" orient="auto">
+                        <polygon points="0 6, 6 0, 12 6, 6 12" fill="#2d3748" />
+                    </marker>
+                </defs>
+                
+                <!-- FileWatcher to MediaFile -->
+                <path class="association" d="M 240 120 L 340 120" />
+                <text class="relationship-label" x="260" y="115">detects</text>
+                <text class="multiplicity" x="320" y="115">*</text>
+                
+                <!-- MediaFile to Job -->
+                <path class="association" d="M 480 120 L 580 120" />
+                <text class="relationship-label" x="500" y="115">creates</text>
+                <text class="multiplicity" x="470" y="135">1</text>
+                <text class="multiplicity" x="560" y="135">1</text>
+                
+                <!-- JobManager to Job (composition) -->
+                <path class="composition" d="M 760 190 L 760 240" />
+                <text class="relationship-label" x="765" y="220">manages</text>
+                <text class="multiplicity" x="745" y="235">*</text>
+                
+                <!-- Job to JobState enum -->
+                <path class="dependency" d="M 660 320 L 560 380" />
+                <text class="relationship-label" x="580" y="355">uses</text>
+                
+                <!-- Job to ProcessingStep -->
+                <path class="composition" d="M 820 320 L 920 380" />
+                <text class="relationship-label" x="850" y="355">contains</text>
+                <text class="multiplicity" x="810" y="335">1..*</text>
+                
+                <!-- JobManager to ProcessingEngine -->
+                <path class="association" d="M 890 190 L 1020 240" />
+                <text class="relationship-label" x="930" y="220">dispatches to</text>
+                
+                <!-- ProcessingEngine to IProcessor interface -->
+                <path class="implementation" d="M 1120 340 L 1120 440" />
+                
+                <!-- ConcreteProcessors implement IProcessor -->
+                <path class="implementation" d="M 1020 560 L 1070 490" />
+                <path class="implementation" d="M 1120 560 L 1120 490" />
+                <path class="implementation" d="M 1220 560 L 1170 490" />
+                
+                <!-- ProcessingEngine uses ExternalTool -->
+                <path class="dependency" d="M 1200 300 L 1330 300" />
+                <text class="relationship-label" x="1230" y="295">invokes</text>
+                
+                <!-- StateManager to Database -->
+                <path class="association" d="M 280 450 L 280 550" />
+                <text class="relationship-label" x="285" y="505">reads/writes</text>
+                
+                <!-- JobManager to StateManager -->
+                <path class="association" d="M 660 230 L 410 400" />
+                <text class="relationship-label" x="500" y="320">persists via</text>
+                
+                <!-- MonitoringInterface to JobManager -->
+                <path class="dependency" d="M 220 680 L 680 250" />
+                <text class="relationship-label" x="400" y="470">queries</text>
+                
+                <!-- ErrorHandler to Job -->
+                <path class="association" d="M 560 680 L 700 330" />
+                <text class="relationship-label" x="600" y="510">handles failures</text>
+            </svg>
+            
+            <!-- FileWatcher -->
+            <div class="class-box" style="top: 40px; left: 40px; width: 200px;">
+                <div class="class-header">FileWatcher</div>
+                <div class="class-attributes">
+                    <div class="attribute">watchPaths: List&lt;Path&gt;</div>
+                    <div class="attribute">pollInterval: Duration</div>
+                    <div class="attribute">running: boolean</div>
+                </div>
+                <div class="class-methods">
+                    <div class="method">start(): void</div>
+                    <div class="method">stop(): void</div>
+                    <div class="method">onFileDetected(file): void</div>
+                </div>
+            </div>
+            
+            <!-- MediaFile -->
+            <div class="class-box" style="top: 40px; left: 340px; width: 140px;">
+                <div class="class-header">MediaFile</div>
+                <div class="class-attributes">
+                    <div class="attribute">path: Path</div>
+                    <div class="attribute">size: long</div>
+                    <div class="attribute">hash: string</div>
+                    <div class="attribute">format: string</div>
+                </div>
+                <div class="class-methods">
+                    <div class="method">validate(): bool</div>
+                    <div class="method">getMetadata()</div>
+                </div>
+            </div>
+            
+            <!-- JobManager -->
+            <div class="class-box" style="top: 100px; left: 660px; width: 230px;">
+                <div class="class-header">JobManager</div>
+                <div class="class-attributes">
+                    <div class="attribute">queue: Queue&lt;Job&gt;</div>
+                    <div class="attribute">activeJobs: Map&lt;id, Job&gt;</div>
+                    <div class="attribute">stateManager: StateManager</div>
+                </div>
+                <div class="class-methods">
+                    <div class="method">createJob(file): Job</div>
+                    <div class="method">enqueue(job): void</div>
+                    <div class="method">dequeue(): Job</div>
+                    <div class="method">getJobStatus(id): JobState</div>
+                    <div class="method">retryJob(id): void</div>
+                </div>
+            </div>
+            
+            <!-- Job -->
+            <div class="class-box" style="top: 245px; left: 580px; width: 240px;">
+                <div class="class-header">Job</div>
+                <div class="class-attributes">
+                    <div class="attribute">id: UUID</div>
+                    <div class="attribute">mediaFile: MediaFile</div>
+                    <div class="attribute">state: JobState</div>
+                    <div class="attribute">steps: List&lt;ProcessingStep&gt;</div>
+                    <div class="attribute">retryCount: int</div>
+                    <div class="attribute">createdAt: DateTime</div>
+                    <div class="attribute">updatedAt: DateTime</div>
+                </div>
+                <div class="class-methods">
+                    <div class="method">updateState(newState): void</div>
+                    <div class="method">addStep(step): void</div>
+                    <div class="method">canRetry(): boolean</div>
+                    <div class="method">incrementRetry(): void</div>
+                </div>
+            </div>
+            
+            <!-- JobState enum -->
+            <div class="class-box enum" style="top: 385px; left: 370px; width: 180px;">
+                <div class="class-header">&lt;&lt;enum&gt;&gt;<br>JobState</div>
+                <div class="class-attributes">
+                    <div class="attribute">DETECTED</div>
+                    <div class="attribute">QUEUED</div>
+                    <div class="attribute">PROCESSING</div>
+                    <div class="attribute">VALIDATING</div>
+                    <div class="attribute">EXECUTING</div>
+                    <div class="attribute">RETRYING</div>
+                    <div class="attribute">FINALIZING</div>
+                    <div class="attribute">COMPLETED</div>
+                    <div class="attribute">FAILED</div>
+                </div>
+            </div>
+            
+            <!-- ProcessingStep -->
+            <div class="class-box" style="top: 385px; left: 920px; width: 200px;">
+                <div class="class-header">ProcessingStep</div>
+                <div class="class-attributes">
+                    <div class="attribute">name: string</div>
+                    <div class="attribute">status: StepStatus</div>
+                    <div class="attribute">startTime: DateTime</div>
+                    <div class="attribute">endTime: DateTime</div>
+                    <div class="attribute">errorMessage: string</div>
+                </div>
+                <div class="class-methods">
+                    <div class="method">markComplete(): void</div>
+                    <div class="method">markFailed(error): void</div>
+                </div>
+            </div>
+            
+            <!-- ProcessingEngine -->
+            <div class="class-box" style="top: 245px; left: 1020px; width: 200px;">
+                <div class="class-header">ProcessingEngine</div>
+                <div class="class-attributes">
+                    <div class="attribute">processors: List&lt;IProcessor&gt;</div>
+                    <div class="attribute">maxConcurrent: int</div>
+                </div>
+                <div class="class-methods">
+                    <div class="method">execute(job): void</div>
+                    <div class="method">getProcessor(type)</div>
+                    <div class="method">validate(file): bool</div>
+                </div>
+            </div>
+            
+            <!-- IProcessor interface -->
+            <div class="class-box interface" style="top: 445px; left: 1045px; width: 150px;">
+                <div class="class-header">&lt;&lt;interface&gt;&gt;<br>IProcessor</div>
+                <div class="class-methods">
+                    <div class="method">process(file): Result</div>
+                    <div class="method">supports(format): bool</div>
+                    <div class="method">getName(): string</div>
+                </div>
+            </div>
+            
+            <!-- Concrete Processors -->
+            <div class="class-box" style="top: 560px; left: 890px; width: 120px;">
+                <div class="class-header">RipperProcessor</div>
+                <div class="class-methods">
+                    <div class="method">process(file)</div>
+                    <div class="method">supports(fmt)</div>
+                    <div class="method">getName()</div>
+                </div>
+            </div>
+            
+            <div class="class-box" style="top: 560px; left: 1030px; width: 150px;">
+                <div class="class-header">VideoConverter</div>
+                <div class="class-methods">
+                    <div class="method">process(file)</div>
+                    <div class="method">supports(fmt)</div>
+                    <div class="method">getName()</div>
+                </div>
+            </div>
+            
+            <div class="class-box" style="top: 560px; left: 1200px; width: 140px;">
+                <div class="class-header">MetadataTagger</div>
+                <div class="class-methods">
+                    <div class="method">process(file)</div>
+                    <div class="method">supports(fmt)</div>
+                    <div class="method">getName()</div>
+                </div>
+            </div>
+            
+            <!-- ExternalTool -->
+            <div class="class-box" style="top: 245px; left: 1335px; width: 130px;">
+                <div class="class-header">ExternalTool</div>
+                <div class="class-attributes">
+                    <div class="attribute">command: string</div>
+                    <div class="attribute">args: List</div>
+                </div>
+                <div class="class-methods">
+                    <div class="method">execute(): int</div>
+                    <div class="method">getOutput()</div>
+                </div>
+            </div>
+            
+            <!-- StateManager -->
+            <div class="class-box" style="top: 360px; left: 120px; width: 160px;">
+                <div class="class-header">StateManager</div>
+                <div class="class-attributes">
+                    <div class="attribute">db: Database</div>
+                </div>
+                <div class="class-methods">
+                    <div class="method">saveJob(job): void</div>
+                    <div class="method">loadJob(id): Job</div>
+                    <div class="method">updateState(id, state)</div>
+                    <div class="method">queryJobs(filter)</div>
+                </div>
+            </div>
+            
+            <!-- Database -->
+            <div class="class-box" style="top: 555px; left: 140px; width: 120px;">
+                <div class="class-header">Database</div>
+                <div class="class-attributes">
+                    <div class="attribute">connection</div>
+                </div>
+                <div class="class-methods">
+                    <div class="method">connect()</div>
+                    <div class="method">query(sql)</div>
+                    <div class="method">execute(sql)</div>
+                </div>
+            </div>
+            
+            <!-- MonitoringInterface -->
+            <div class="class-box" style="top: 685px; left: 40px; width: 180px;">
+                <div class="class-header">MonitoringInterface</div>
+                <div class="class-attributes">
+                    <div class="attribute">jobManager: JobManager</div>
+                </div>
+                <div class="class-methods">
+                    <div class="method">listJobs(): List&lt;Job&gt;</div>
+                    <div class="method">showJobDetail(id)</div>
+                    <div class="method">pauseJob(id): void</div>
+                    <div class="method">resumeJob(id): void</div>
+                </div>
+            </div>
+            
+            <!-- ErrorHandler -->
+            <div class="class-box" style="top: 685px; left: 380px; width: 180px;">
+                <div class="class-header">ErrorHandler</div>
+                <div class="class-attributes">
+                    <div class="attribute">maxRetries: int</div>
+                    <div class="attribute">backoffStrategy</div>
+                </div>
+                <div class="class-methods">
+                    <div class="method">handleError(job, error)</div>
+                    <div class="method">shouldRetry(job): bool</div>
+                    <div class="method">calculateBackoff()</div>
+                    <div class="method">notifyFailure(job)</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-line" style="background: #4a5568;"></div>
+                <span>Association</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="background: #2d3748; position: relative;">
+                    <div style="position: absolute; right: -6px; top: -4px; width: 10px; height: 10px; background: #2d3748; transform: rotate(45deg);"></div>
+                </div>
+                <span>Composition (strong ownership)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="background: transparent; border-top: 2px solid #4a5568;"></div>
+                <span>Inheritance</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="background: transparent; border-top: 2px dashed #805ad5;"></div>
+                <span>Interface Implementation</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="background: transparent; border-top: 1.5px dashed #718096;"></div>
+                <span>Dependency</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

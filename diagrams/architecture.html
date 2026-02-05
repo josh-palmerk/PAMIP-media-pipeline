@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Processing System - Architecture Diagram</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 1400px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #718096;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .diagram {
+            position: relative;
+            width: 100%;
+            height: 700px;
+            background: #f7fafc;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .component {
+            position: absolute;
+            background: white;
+            border: 2px solid #4299e1;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .component:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+            border-color: #2b6cb0;
+        }
+        
+        .component-title {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        
+        .component-desc {
+            font-size: 12px;
+            color: #4a5568;
+            line-height: 1.5;
+        }
+        
+        .external {
+            border-color: #48bb78;
+            background: #f0fff4;
+        }
+        
+        .external:hover {
+            border-color: #2f855a;
+        }
+        
+        .storage {
+            border-color: #ed8936;
+            background: #fffaf0;
+        }
+        
+        .storage:hover {
+            border-color: #c05621;
+        }
+        
+        .interface {
+            border-color: #9f7aea;
+            background: #faf5ff;
+        }
+        
+        .interface:hover {
+            border-color: #6b46c1;
+        }
+        
+        svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .arrow {
+            stroke: #718096;
+            stroke-width: 2;
+            fill: none;
+            marker-end: url(#arrowhead);
+        }
+        
+        .arrow-label {
+            font-size: 11px;
+            fill: #4a5568;
+            font-weight: 500;
+        }
+        
+        .legend {
+            margin-top: 30px;
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .legend-box {
+            width: 40px;
+            height: 25px;
+            border-radius: 4px;
+            border: 2px solid;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Media Processing Automation System</h1>
+        <p class="subtitle">System Architecture Diagram</p>
+        
+        <div class="diagram">
+            <svg>
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                        <polygon points="0 0, 10 3, 0 6" fill="#718096" />
+                    </marker>
+                </defs>
+                
+                <!-- Media Sources to File Watcher -->
+                <path class="arrow" d="M 120 80 L 120 145" />
+                <text class="arrow-label" x="125" y="115">new media</text>
+                
+                <!-- File Watcher to Job Manager -->
+                <path class="arrow" d="M 250 180 L 380 180" />
+                <text class="arrow-label" x="285" y="175">create job</text>
+                
+                <!-- Job Manager to State Database -->
+                <path class="arrow" d="M 520 220 L 520 290" />
+                <text class="arrow-label" x="525" y="260">persist state</text>
+                
+                <!-- Job Manager to Processing Engine -->
+                <path class="arrow" d="M 520 140 L 750 140" />
+                <text class="arrow-label" x="610" y="135">dispatch job</text>
+                
+                <!-- Processing Engine to External Tools -->
+                <path class="arrow" d="M 890 180 L 890 290" />
+                <text class="arrow-label" x="895" y="240">invoke</text>
+                
+                <!-- Processing Engine to Job Manager (feedback) -->
+                <path class="arrow" d="M 750 100 L 610 100 L 610 140" />
+                <text class="arrow-label" x="650" y="95">status updates</text>
+                
+                <!-- Job Manager to Monitoring Interface -->
+                <path class="arrow" d="M 440 220 L 280 350" />
+                <text class="arrow-label" x="340" y="290">status query</text>
+                
+                <!-- Processing Engine to Output Storage -->
+                <path class="arrow" d="M 950 180 L 1100 280" />
+                <text class="arrow-label" x="1000" y="240">write output</text>
+                
+                <!-- Error Handler connections -->
+                <path class="arrow" d="M 890 80 L 750 80 L 750 100" stroke-dasharray="5,5" />
+                <text class="arrow-label" x="800" y="75">retry signal</text>
+            </svg>
+            
+            <!-- External Sources -->
+            <div class="component external" style="top: 20px; left: 20px; width: 200px;">
+                <div class="component-title">📁 Media Sources</div>
+                <div class="component-desc">Watched directories, mounted drives, network shares</div>
+            </div>
+            
+            <!-- File Watcher -->
+            <div class="component" style="top: 150px; left: 20px; width: 230px;">
+                <div class="component-title">👁️ File Watcher</div>
+                <div class="component-desc">Monitors locations for new media, detects additions/changes</div>
+            </div>
+            
+            <!-- Job Manager -->
+            <div class="component" style="top: 140px; left: 380px; width: 230px;">
+                <div class="component-title">⚙️ Job Manager</div>
+                <div class="component-desc">Creates, tracks, and coordinates processing jobs. Manages lifecycle</div>
+            </div>
+            
+            <!-- State Database -->
+            <div class="component storage" style="top: 295px; left: 400px; width: 240px;">
+                <div class="component-title">💾 State Database</div>
+                <div class="component-desc">Persistent storage for job state, history, and metadata</div>
+            </div>
+            
+            <!-- Processing Engine -->
+            <div class="component" style="top: 100px; left: 750px; width: 240px;">
+                <div class="component-title">🔧 Processing Engine</div>
+                <div class="component-desc">Executes workflow steps, orchestrates external tools, handles errors</div>
+            </div>
+            
+            <!-- Error Handler -->
+            <div class="component" style="top: 20px; left: 820px; width: 200px;">
+                <div class="component-title">🔄 Error Handler</div>
+                <div class="component-desc">Retry logic, failure recovery, notifications</div>
+            </div>
+            
+            <!-- External Tools -->
+            <div class="component external" style="top: 295px; left: 770px; width: 240px;">
+                <div class="component-title">🛠️ External Tools</div>
+                <div class="component-desc">Media rippers, converters, encoders (FFmpeg, HandBrake, etc.)</div>
+            </div>
+            
+            <!-- Output Storage -->
+            <div class="component storage" style="top: 285px; left: 1100px; width: 200px;">
+                <div class="component-title">📤 Output Storage</div>
+                <div class="component-desc">Processed media destination</div>
+            </div>
+            
+            <!-- Monitoring Interface -->
+            <div class="component interface" style="top: 350px; left: 80px; width: 260px;">
+                <div class="component-title">🖥️ Monitoring Interface</div>
+                <div class="component-desc">CLI/Web interface for status, control, and job management</div>
+            </div>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-box" style="border-color: #4299e1; background: white;"></div>
+                <span>Core Components</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="border-color: #48bb78; background: #f0fff4;"></div>
+                <span>External Systems</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="border-color: #ed8936; background: #fffaf0;"></div>
+                <span>Storage/Persistence</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box" style="border-color: #9f7aea; background: #faf5ff;"></div>
+                <span>User Interface</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
