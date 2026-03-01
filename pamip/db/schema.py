@@ -2,12 +2,16 @@ from .database import Database
 
 
 def initialize_schema(db: Database):
+
+    # -------------------------
+    # Jobs Table
+    # -------------------------
     db.execute("""
     CREATE TABLE IF NOT EXISTS jobs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         file_path TEXT NOT NULL,
         status TEXT NOT NULL CHECK(status IN (
-            'pending','running','completed','failed','retrying'
+            'pending','running','completed','failed'
         )),
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -17,6 +21,9 @@ def initialize_schema(db: Database):
     );
     """)
 
+    # -------------------------
+    # Steps Table
+    # -------------------------
     db.execute("""
     CREATE TABLE IF NOT EXISTS steps (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -26,15 +33,23 @@ def initialize_schema(db: Database):
         status TEXT NOT NULL CHECK(status IN (
             'pending','running','completed','failed'
         )),
+
+        attempt_count INTEGER NOT NULL DEFAULT 0,
+        max_attempts INTEGER NOT NULL DEFAULT 1,
+
         started_at DATETIME,
         finished_at DATETIME,
         exit_code INTEGER,
         stdout TEXT,
         stderr TEXT,
+
         FOREIGN KEY(job_id) REFERENCES jobs(id) ON DELETE CASCADE
     );
     """)
 
+    # -------------------------
+    # Indexes
+    # -------------------------
     db.execute("CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);")
     db.execute("CREATE INDEX IF NOT EXISTS idx_steps_job_id ON steps(job_id);")
     db.execute("CREATE INDEX IF NOT EXISTS idx_steps_job_order ON steps(job_id, step_order);")

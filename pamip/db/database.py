@@ -1,5 +1,6 @@
 import sqlite3
 from pathlib import Path
+from contextlib import contextmanager
 
 
 class Database:
@@ -7,29 +8,45 @@ class Database:
         self.db_path = Path(db_path)
         self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
-        self._enable_foreign_keys()
 
-    def _enable_foreign_keys(self):
+        # Enable FK enforcement
         self.conn.execute("PRAGMA foreign_keys = ON;")
 
+        # Optional but recommended
+        self.conn.execute("PRAGMA journal_mode = WAL;")
+
+        # Manual transaction control
+        self.conn.isolation_level = None
+
+    # ------------------------------
+    # Core Execution (NO auto commit)
+    # ------------------------------
+
     def execute(self, sql: str, params: tuple = ()):
-        cursor = self.conn.execute(sql, params)
-        self.conn.commit()
-        return cursor
+        return self.conn.execute(sql, params)
 
-    def executemany(self, sql: str, param_list: list[tuple]):
-        cursor = self.conn.executemany(sql, param_list)
-        self.conn.commit()
-        return cursor
+    def executemany(self, sql: str, param_list):
+        return self.conn.executemany(sql, param_list)
 
-    def begin(self):
-        self.conn.execute("BEGIN")
+    def fetchone(self, sql: str, params: tuple = ()):
+        return self.conn.execute(sql, params).fetchone()
 
-    def commit(self):
-        self.conn.commit()
+    def fetchall(self, sql: str, params: tuple = ()):
+        return self.conn.execute(sql, params).fetchall()
 
-    def rollback(self):
-        self.conn.rollback()
+    # ------------------------------
+    # Transaction Manager
+    # ------------------------------
+
+    @contextmanager
+    def transaction(self):
+        try:
+            self.conn.execute("BEGIN")
+            yield
+            self.conn.execute("COMMIT")
+        except Exception:
+            self.conn.execute("ROLLBACK")
+            raise
 
     def close(self):
         self.conn.close()
