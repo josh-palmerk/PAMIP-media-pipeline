@@ -1,0 +1,37 @@
+"""
+pamip/
+ └── cli/
+      └── commands.py
+      
+ └── core/
+      └── job_manager.py
+
+ └── db/
+      └── database.py
+      └── job_repository.py
+      └── schema.py
+      └── step_repository.py
+
+ └── ingestion/
+      └── watcher.py
+
+ └── jobs/
+      └── manager.py
+      └── models.py
+
+ └── pipeline/
+      └── engine.py
+      └── steps.py
+
+ └── tools/
+      └── executor.py
+
+ └── worker/
+      └── loop.py
+      └── scheduler.py
+
+ └── config.py
+ └── main.py
+ 
+ pamip.db
+"""
