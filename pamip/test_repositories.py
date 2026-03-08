@@ -292,7 +292,7 @@ def run_tests():
     steps = step_repo.get_steps_for_job(job_id)
     check("terminal failure: job failed",       job.status == "failed")
     check("terminal failure: step1 failed",     steps[0].status == "failed")
-    check("terminal failure: step2 not run",    steps[1].status == "pending")
+    check("terminal failure: step2 not run",    steps[1].status == "pending") # Requirement FR-11
     check("terminal failure: stderr captured",  steps[0].stderr == "boom")
 
     # -- Retry: step fails once then succeeds --
