@@ -101,7 +101,7 @@ class JobManager:
         Executes all steps for a job sequentially.
         Handles per-step retries and resets the step loop on retry.
 
-        step_executor: callable(step: Step) -> dict
+        step_executor: callable(step: Step, job: Job) -> dict
             Must return a dict with keys:
                 success   (bool)
                 exit_code (int, optional)
@@ -115,6 +115,9 @@ class JobManager:
 
         # Transition job: pending -> running
         self.start_job(job_id)
+
+        # Fetch job once — used to provide context to step handlers
+        job = self.job_repo.get_job(job_id)
 
         while True:  # outer loop allows restart after a retry
 
@@ -132,7 +135,7 @@ class JobManager:
                     self.step_repo.update_step_status(step.id, "running")
 
                 # ---- Execute outside DB transaction ----
-                result = step_executor(step)
+                result = step_executor(step, job)
 
                 # ---- Persist result ----
                 with self.db.transaction():

@@ -264,7 +264,7 @@ def run_tests():
     job_id = seed_job(job_repo)
     seed_steps(db, step_repo, job_id)
 
-    def executor_success(step):
+    def executor_success(step, job):
         return {"success": True, "exit_code": 0, "stdout": "ok", "stderr": ""}
 
     manager.process_job(job_id, executor_success)
@@ -284,7 +284,7 @@ def run_tests():
         {"step_name": "step2", "max_attempts": 1},
     ])
 
-    def executor_fail_always(step):
+    def executor_fail_always(step, job):
         return {"success": False, "exit_code": 1, "stdout": "", "stderr": "boom"}
 
     manager.process_job(job_id, executor_fail_always)
@@ -292,7 +292,7 @@ def run_tests():
     steps = step_repo.get_steps_for_job(job_id)
     check("terminal failure: job failed",       job.status == "failed")
     check("terminal failure: step1 failed",     steps[0].status == "failed")
-    check("terminal failure: step2 not run",    steps[1].status == "pending") # Requirement FR-11
+    check("terminal failure: step2 not run",    steps[1].status == "pending")
     check("terminal failure: stderr captured",  steps[0].stderr == "boom")
 
     # -- Retry: step fails once then succeeds --
@@ -305,7 +305,7 @@ def run_tests():
 
     attempt_tracker = {"step1": 0}
 
-    def executor_retry(step):
+    def executor_retry(step, job):
         if step.step_name == "step1":
             attempt_tracker["step1"] += 1
             if attempt_tracker["step1"] < 2:

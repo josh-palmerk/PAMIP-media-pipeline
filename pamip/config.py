@@ -17,6 +17,7 @@ DEFAULT_CONFIG = {
     "output_directory": "/media/processed",
     "allowed_extensions": [".mp4", ".mkv", ".jpg", ".png"],
     "poll_interval_seconds": 5,
+    "max_concurrent_jobs": 1,
     "pipeline": [
         {"step_name": "transcode", "max_attempts": 3, "timeout_seconds": 300},
         {"step_name": "thumbnail", "max_attempts": 2, "timeout_seconds": 60},
@@ -51,12 +52,14 @@ class Config:
         output_directory       (str)              — directory where processed files are moved
         allowed_extensions     (list[str])        — file extensions that trigger job creation
         poll_interval_seconds  (int)              — seconds between directory scans
+        max_concurrent_jobs    (int)              — number of jobs to process simultaneously
         pipeline               (list[StepConfig]) — ordered list of pipeline step definitions
     """
     watch_directory:       str
     output_directory:      str
     allowed_extensions:    list[str]
     poll_interval_seconds: int
+    max_concurrent_jobs:   int
     pipeline:              list[StepConfig] = field(default_factory=list)
 
 
@@ -78,7 +81,10 @@ def _validate(raw: dict):
     Checks that required top-level keys are present and that the pipeline
     list is non-empty. Raises ValueError on any violation.
     """
-    required_keys = ["watch_directory", "output_directory", "allowed_extensions", "poll_interval_seconds", "pipeline"]
+    required_keys = [
+        "watch_directory", "output_directory", "allowed_extensions",
+        "poll_interval_seconds", "max_concurrent_jobs", "pipeline"
+    ]
     for key in required_keys:
         if key not in raw:
             raise ValueError(f"Missing required config key: '{key}'")
@@ -121,5 +127,6 @@ def load_config() -> Config:
         output_directory=       raw["output_directory"],
         allowed_extensions=     raw["allowed_extensions"],
         poll_interval_seconds=  raw["poll_interval_seconds"],
+        max_concurrent_jobs=    raw["max_concurrent_jobs"],
         pipeline=               pipeline,
     )
