@@ -1,16 +1,16 @@
 {
-    "watch_directory": "/media/incoming",
-    "output_directory": "/media/processed",
+    "watch_directory": "C:/media/incoming",
+    "output_directory": "C:/media/processed",
     "allowed_extensions": [
         ".mp4",
         ".mkv",
         ".jpg",
-        ".png"
+        ".png",
+        ".mov"
     ],
     "poll_interval_seconds": 5,
     "max_concurrent_jobs": 1,
-    "pipeline": [
-        {
+    "pipeline": [{
             "step_name": "transcode",
             "max_attempts": 3,
             "timeout_seconds": 300

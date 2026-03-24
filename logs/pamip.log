@@ -141,3 +141,13 @@ sqlite3.ProgrammingError: SQLite objects created in a thread can only be used in
 2026-03-24 14:57:06,848 [INFO] worker.loop: Job 1 started.
 2026-03-24 14:57:07,056 [INFO] worker.loop: Job 1 completed.
 2026-03-24 14:57:56,857 [INFO] worker.loop: Worker stopped.
+2026-03-24 15:17:24,148 [INFO] worker.loop: Worker starting.
+2026-03-24 15:18:44,168 [INFO] worker.loop: Worker stopped.
+2026-03-24 15:18:47,310 [INFO] worker.loop: Worker starting.
+2026-03-24 15:21:47,348 [INFO] worker.loop: Worker stopped.
+2026-03-24 15:24:14,469 [INFO] worker.loop: Worker starting.
+2026-03-24 15:24:14,527 [INFO] worker.loop: Created job 3 for file: C:\media\incoming\live-your-life.mov
+2026-03-24 15:24:14,528 [INFO] worker.loop: Dispatched job 3 to thread job-3
+2026-03-24 15:24:14,537 [INFO] worker.loop: Job 3 started.
+2026-03-24 15:24:14,585 [INFO] worker.loop: Job 3 completed.
+2026-03-24 15:24:54,537 [INFO] worker.loop: Worker stopped.
