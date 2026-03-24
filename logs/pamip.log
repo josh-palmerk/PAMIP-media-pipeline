@@ -1,0 +1,138 @@
+2026-03-14 21:56:30,781 [INFO] worker.loop: Worker starting.
+2026-03-14 21:56:30,782 [WARNING] worker.loop: Found 1 orphaned job(s) from previous session. Re-queuing.
+2026-03-14 21:56:30,794 [INFO] worker.loop: Job 1 started.
+2026-03-14 21:56:30,794 [INFO] worker.loop: Dispatched job 1 to thread job-1
+2026-03-14 21:56:30,795 [ERROR] worker.loop: Job 1 failed with exception: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 19420 and this is thread id 21992.
+Traceback (most recent call last):
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\db\database.py", line 44, in transaction
+    self.conn.execute("BEGIN")
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^
+sqlite3.ProgrammingError: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 19420 and this is thread id 21992.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\worker\loop.py", line 211, in _run_job
+    manager.process_job(job_id, self.engine.execute_step)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\core\job_manager.py", line 117, in process_job
+    self.start_job(job_id)
+    ~~~~~~~~~~~~~~^^^^^^^^
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\core\job_manager.py", line 70, in start_job
+    with self.db.transaction():
+         ~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\scrib\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\db\database.py", line 48, in transaction
+    self.conn.execute("ROLLBACK")
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+sqlite3.ProgrammingError: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 19420 and this is thread id 21992.
+2026-03-14 21:56:35,798 [INFO] worker.loop: Job 1 started.
+2026-03-14 21:56:35,798 [INFO] worker.loop: Dispatched job 1 to thread job-1
+2026-03-14 21:56:35,799 [ERROR] worker.loop: Job 1 failed with exception: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 19420 and this is thread id 23600.
+Traceback (most recent call last):
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\db\database.py", line 44, in transaction
+    self.conn.execute("BEGIN")
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^
+sqlite3.ProgrammingError: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 19420 and this is thread id 23600.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\worker\loop.py", line 211, in _run_job
+    manager.process_job(job_id, self.engine.execute_step)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\core\job_manager.py", line 117, in process_job
+    self.start_job(job_id)
+    ~~~~~~~~~~~~~~^^^^^^^^
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\core\job_manager.py", line 70, in start_job
+    with self.db.transaction():
+         ~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\scrib\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\db\database.py", line 48, in transaction
+    self.conn.execute("ROLLBACK")
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+sqlite3.ProgrammingError: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 19420 and this is thread id 23600.
+2026-03-14 21:56:40,802 [INFO] worker.loop: Job 1 started.
+2026-03-14 21:56:40,803 [INFO] worker.loop: Dispatched job 1 to thread job-1
+2026-03-14 21:56:40,804 [ERROR] worker.loop: Job 1 failed with exception: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 19420 and this is thread id 18984.
+Traceback (most recent call last):
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\db\database.py", line 44, in transaction
+    self.conn.execute("BEGIN")
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^
+sqlite3.ProgrammingError: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 19420 and this is thread id 18984.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\worker\loop.py", line 211, in _run_job
+    manager.process_job(job_id, self.engine.execute_step)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\core\job_manager.py", line 117, in process_job
+    self.start_job(job_id)
+    ~~~~~~~~~~~~~~^^^^^^^^
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\core\job_manager.py", line 70, in start_job
+    with self.db.transaction():
+         ~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\scrib\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\db\database.py", line 48, in transaction
+    self.conn.execute("ROLLBACK")
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+sqlite3.ProgrammingError: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 19420 and this is thread id 18984.
+2026-03-14 21:56:45,807 [INFO] worker.loop: Job 1 started.
+2026-03-14 21:56:45,807 [INFO] worker.loop: Dispatched job 1 to thread job-1
+2026-03-14 21:56:45,809 [ERROR] worker.loop: Job 1 failed with exception: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 19420 and this is thread id 26396.
+Traceback (most recent call last):
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\db\database.py", line 44, in transaction
+    self.conn.execute("BEGIN")
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^
+sqlite3.ProgrammingError: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 19420 and this is thread id 26396.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\worker\loop.py", line 211, in _run_job
+    manager.process_job(job_id, self.engine.execute_step)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\core\job_manager.py", line 117, in process_job
+    self.start_job(job_id)
+    ~~~~~~~~~~~~~~^^^^^^^^
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\core\job_manager.py", line 70, in start_job
+    with self.db.transaction():
+         ~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\scrib\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\db\database.py", line 48, in transaction
+    self.conn.execute("ROLLBACK")
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+sqlite3.ProgrammingError: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 19420 and this is thread id 26396.
+2026-03-14 21:56:50,812 [INFO] worker.loop: Job 1 started.
+2026-03-14 21:56:50,812 [INFO] worker.loop: Dispatched job 1 to thread job-1
+2026-03-14 21:56:50,814 [ERROR] worker.loop: Job 1 failed with exception: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 19420 and this is thread id 21516.
+Traceback (most recent call last):
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\db\database.py", line 44, in transaction
+    self.conn.execute("BEGIN")
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^
+sqlite3.ProgrammingError: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 19420 and this is thread id 21516.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\worker\loop.py", line 211, in _run_job
+    manager.process_job(job_id, self.engine.execute_step)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\core\job_manager.py", line 117, in process_job
+    self.start_job(job_id)
+    ~~~~~~~~~~~~~~^^^^^^^^
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\core\job_manager.py", line 70, in start_job
+    with self.db.transaction():
+         ~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\scrib\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 141, in __enter__
+    return next(self.gen)
+  File "c:\Users\scrib\Documents\GitHub\PAMIP-media-pipeline\pamip\db\database.py", line 48, in transaction
+    self.conn.execute("ROLLBACK")
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+sqlite3.ProgrammingError: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 19420 and this is thread id 21516.
+2026-03-14 21:56:55,815 [INFO] worker.loop: Worker stopped.
