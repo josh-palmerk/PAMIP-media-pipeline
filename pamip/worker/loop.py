@@ -31,7 +31,8 @@ class WorkerLoop:
     pending jobs to the pipeline engine up to the configured concurrency limit.
 
     Each job is executed in its own thread so multiple jobs can run
-    simultaneously when max_concurrent_jobs > 1.
+    simultaneously when max_concurrent_jobs > 1. Each thread opens its own
+    database connection to avoid SQLite cross-thread conflicts.
 
     Usage:
         loop = WorkerLoop(db, job_repo, step_repo, engine, watcher, config)
@@ -51,7 +52,7 @@ class WorkerLoop:
         """
         __init__
         Args:
-            db                   (Database)       — shared database connection
+            db                   (Database)       — shared database connection (main thread only)
             job_repo             (JobRepository)  — job persistence layer
             step_repo            (StepRepository) — step persistence layer
             engine               (PipelineEngine) — step executor
@@ -60,6 +61,7 @@ class WorkerLoop:
             max_concurrent_jobs  (int)            — maximum simultaneous jobs
         """
         self.db                  = db
+        self.db_path             = str(db.db_path)  # stored so job threads can open their own connection
         self.job_repo            = job_repo
         self.step_repo           = step_repo
         self.engine              = engine
@@ -197,12 +199,18 @@ class WorkerLoop:
         """
         _run_job
         Runs a single job in a worker thread.
+        Opens a dedicated database connection for this thread — SQLite
+        connections cannot be shared across threads.
         Delegates execution to JobManager and logs the outcome.
 
         Args:
             job_id (int) — ID of the job to process
         """
-        manager = JobManager(self.db, self.job_repo, self.step_repo)
+        # Each thread gets its own DB connection and repositories
+        db        = Database(self.db_path)
+        job_repo  = JobRepository(db)
+        step_repo = StepRepository(db)
+        manager   = JobManager(db, job_repo, step_repo)
 
         try:
             log.info(f"Job {job_id} started.")
@@ -216,3 +224,6 @@ class WorkerLoop:
         except Exception as e:
             log.error(f"Job {job_id} failed with exception: {e}", exc_info=True)
             print(f"[worker] Job {job_id} failed: {e}")
+
+        finally:
+            db.close()
