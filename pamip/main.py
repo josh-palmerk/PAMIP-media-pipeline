@@ -101,6 +101,8 @@ def _start_worker(config, db, job_repo, step_repo):
         step_repo=           step_repo,
         engine=              engine,
         watcher=             watcher,
+        pipeline=            config.pipeline,
+        output_dir=          config.output_directory,
         poll_interval=       config.poll_interval_seconds,
         max_concurrent_jobs= config.max_concurrent_jobs,
     )

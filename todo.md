@@ -1,0 +1,2 @@
+- fix default incoming/processed dirs
+- stop duplicating

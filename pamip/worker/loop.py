@@ -6,10 +6,12 @@ a thread pool. Recovers orphaned 'running' jobs on startup.
 """
 
 import time
+import shutil
 import threading
 import logging
 from pathlib import Path
 
+from config import StepConfig
 from db.database import Database
 from db.job_repository import JobRepository
 from db.step_repository import StepRepository
@@ -46,19 +48,23 @@ class WorkerLoop:
         step_repo:    StepRepository,
         engine:       PipelineEngine,
         watcher:      FileWatcher,
+        pipeline:     list[StepConfig],
+        output_dir:   str,
         poll_interval:      int,
         max_concurrent_jobs: int,
     ):
         """
         __init__
         Args:
-            db                   (Database)       — shared database connection (main thread only)
-            job_repo             (JobRepository)  — job persistence layer
-            step_repo            (StepRepository) — step persistence layer
-            engine               (PipelineEngine) — step executor
-            watcher              (FileWatcher)    — file system scanner
-            poll_interval        (int)            — seconds between scan iterations
-            max_concurrent_jobs  (int)            — maximum simultaneous jobs
+            db                   (Database)         — shared database connection (main thread only)
+            job_repo             (JobRepository)    — job persistence layer
+            step_repo            (StepRepository)   — step persistence layer
+            engine               (PipelineEngine)   — step executor
+            watcher              (FileWatcher)      — file system scanner
+            pipeline             (list[StepConfig]) — step definitions used to seed each new job
+            output_dir           (str)              — directory to move files after successful processing
+            poll_interval        (int)              — seconds between scan iterations
+            max_concurrent_jobs  (int)              — maximum simultaneous jobs
         """
         self.db                  = db
         self.db_path             = str(db.db_path)  # stored so job threads can open their own connection
@@ -66,6 +72,8 @@ class WorkerLoop:
         self.step_repo           = step_repo
         self.engine              = engine
         self.watcher             = watcher
+        self.pipeline            = pipeline
+        self.output_dir          = Path(output_dir)
         self.poll_interval       = poll_interval
         self.max_concurrent_jobs = max_concurrent_jobs
 
@@ -147,14 +155,20 @@ class WorkerLoop:
         """
         _iteration
         Single pass of the worker loop:
-            1. Scan for new files and create jobs
+            1. Scan for new files and create jobs with pipeline steps
             2. Clean up finished threads
             3. Dispatch pending jobs up to the concurrency limit
         """
         # 1. Detect new files and create a job for each — FR-1, FR-4
         new_files = self.watcher.scan()
         for file_path in new_files:
-            job_id = self.job_repo.create_job(str(file_path))
+            with self.db.transaction():
+                job_id = self.job_repo.create_job(str(file_path))
+                # Seed pipeline steps from config — FR-12
+                self.step_repo.create_steps(job_id, [
+                    {"step_name": s.step_name, "max_attempts": s.max_attempts}
+                    for s in self.pipeline
+                ])
             log.info(f"Created job {job_id} for file: {file_path}")
             print(f"[worker] New file detected: {file_path} -> job {job_id}")
 
@@ -201,7 +215,7 @@ class WorkerLoop:
         Runs a single job in a worker thread.
         Opens a dedicated database connection for this thread — SQLite
         connections cannot be shared across threads.
-        Delegates execution to JobManager and logs the outcome.
+        On success, moves the source file to the output directory.
 
         Args:
             job_id (int) — ID of the job to process
@@ -218,8 +232,15 @@ class WorkerLoop:
 
             manager.process_job(job_id, self.engine.execute_step)
 
-            log.info(f"Job {job_id} completed.")
-            print(f"[worker] Job {job_id} completed.")
+            # Move source file to output directory on success — FR-2
+            job = job_repo.get_job(job_id)
+            if job and job.status == "completed":
+                src = Path(job.file_path)
+                dst = self.output_dir / src.name
+                self.output_dir.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(src), str(dst))
+                log.info(f"Job {job_id} completed. File moved to {dst}")
+                print(f"[worker] Job {job_id} completed. File moved to {dst}")
 
         except Exception as e:
             log.error(f"Job {job_id} failed with exception: {e}", exc_info=True)
