@@ -20,21 +20,25 @@ class PipelineEngine:
     result dict that JobManager uses to record outcomes and drive retries.
 
     Usage:
-        engine = PipelineEngine(step_configs)
+        engine = PipelineEngine(step_configs, output_dir)
         manager.process_job(job_id, engine.execute_step)
     """
 
-    def __init__(self, step_configs: list):
+    def __init__(self, step_configs: list, output_dir: str):
         """
         __init__
         Args:
             step_configs (list[StepConfig]) — pipeline step definitions from config,
                                               used to look up timeout_seconds per step
+            output_dir   (str)              — directory where processed files are written,
+                                              passed to handlers so output never lands in
+                                              the watch directory
         """
         # Build a lookup of step_name -> timeout_seconds for quick access during execution
-        self._timeouts: dict[str, int] = {
+        self._timeouts:   dict[str, int] = {
             s.step_name: s.timeout_seconds for s in step_configs
         }
+        self.output_dir = output_dir
 
     def execute_step(self, step: Step, job: Job) -> dict:
         """
@@ -69,7 +73,7 @@ class PipelineEngine:
             }
 
         # Build command from handler and run it
-        command         = handler(job.file_path, job)
+        command         = handler(job.file_path, self.output_dir, job)
         timeout_seconds = self._timeouts.get(step.step_name, 60)
         result          = run_process(command, timeout_seconds)
 

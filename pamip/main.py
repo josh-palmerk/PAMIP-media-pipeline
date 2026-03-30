@@ -88,7 +88,7 @@ def _start_worker(config, db, job_repo, step_repo):
         job_repo  (JobRepository)   — job persistence layer
         step_repo (StepRepository)  — step persistence layer
     """
-    engine = PipelineEngine(config.pipeline)
+    engine = PipelineEngine(config.pipeline, config.output_directory)
 
     watcher = FileWatcher(
         watch_dir=          config.watch_directory,

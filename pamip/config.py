@@ -13,8 +13,8 @@ CONFIG_PATH = Path("config/config.json")
 
 # Default configuration written to disk if no config file is found
 DEFAULT_CONFIG = {
-    "watch_directory": "/media/incoming",
-    "output_directory": "/media/processed",
+    "watch_directory": "./media/incoming",
+    "output_directory": "./media/processed",
     "allowed_extensions": [".mp4", ".mkv", ".jpg", ".png"],
     "poll_interval_seconds": 5,
     "max_concurrent_jobs": 1,

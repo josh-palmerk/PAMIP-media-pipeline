@@ -5,13 +5,14 @@ Each handler is responsible for building the command that the executor
 will run for its step.
 
 To add a new step:
-    1. Define a function that accepts (file_path: str, job: Job) -> list[str]
+    1. Define a function that accepts (file_path: str, output_dir: str, job: Job) -> list[str]
     2. Decorate it with @register_step("your_step_name")
     3. Add the step name to the pipeline in config/config.json
 
 No changes to core orchestration logic are required. (FR-12)
 """
 
+from pathlib import Path
 from jobs.models import Job
 
 
@@ -27,12 +28,12 @@ def register_step(step_name: str):
     """
     register_step
     Decorator that registers a step handler function under the given name.
-    The decorated function must accept (file_path: str, job: Job) and
-    return a list[str] representing the command to execute.
+    The decorated function must accept (file_path: str, output_dir: str, job: Job)
+    and return a list[str] representing the command to execute.
 
     Usage:
         @register_step("transcode")
-        def handle_transcode(file_path: str, job: Job) -> list[str]:
+        def handle_transcode(file_path: str, output_dir: str, job: Job) -> list[str]:
             return ["ffmpeg", "-i", file_path, ...]
     """
     def decorator(fn):
@@ -63,57 +64,58 @@ def get_step_handler(step_name: str) -> callable:
 # ----------------------------------------
 
 @register_step("transcode")
-def handle_transcode(file_path: str, job: Job) -> list[str]:
+def handle_transcode(file_path: str, output_dir: str, job: Job) -> list[str]:
     """
     handle_transcode
     Builds an ffmpeg command to transcode the input file to H.264/AAC MP4.
-    Output file is written alongside the input with a '_transcoded' suffix.
+    Output is written to output_dir to prevent the watcher from picking it up.
 
     Args:
-        file_path  (str) — absolute path to the input media file
-        job        (Job) — the parent job (available for context if needed)
+        file_path   (str) — absolute path to the input media file
+        output_dir  (str) — directory to write the transcoded file into
+        job         (Job) — the parent job (available for context if needed)
 
     Returns:
         list[str] — command passed to run_process()
     """
-    from pathlib import Path
     input_path  = Path(file_path)
-    output_path = input_path.with_stem(input_path.stem + "_transcoded").with_suffix(".mp4")
+    output_path = Path(output_dir) / (input_path.stem + "_transcoded.mp4")
 
     return [
         "ffmpeg",
-        "-i",       str(input_path),
-        "-c:v",     "libx264",      # video codec
-        "-c:a",     "aac",          # audio codec
-        "-y",                       # overwrite output without prompting
+        "-i",   str(input_path),
+        "-c:v", "libx264",      # video codec
+        "-c:a", "aac",          # audio codec
+        "-y",                   # overwrite output without prompting
         str(output_path),
     ]
 
 
 @register_step("thumbnail")
-def handle_thumbnail(file_path: str, job: Job) -> list[str]:
+def handle_thumbnail(file_path: str, output_dir: str, job: Job) -> list[str]:
     """
     handle_thumbnail
     Builds an ffmpeg command to extract a single frame as a JPEG thumbnail.
-    Frame is captured at the 5-second mark. Output is written alongside
-    the input with a '_thumbnail' suffix.
+    Frame is captured at the 5-second mark. Output is written to output_dir
+    to prevent the watcher from picking it up.
 
     Args:
-        file_path  (str) — absolute path to the input media file
-        job        (Job) — the parent job (available for context if needed)
+        file_path   (str) — absolute path to the input media file
+        output_dir  (str) — directory to write the thumbnail into
+        job         (Job) — the parent job (available for context if needed)
 
     Returns:
         list[str] — command passed to run_process()
     """
-    from pathlib import Path
     input_path  = Path(file_path)
-    output_path = input_path.with_stem(input_path.stem + "_thumbnail").with_suffix(".jpg")
+    output_path = Path(output_dir) / (input_path.stem + "_thumbnail.jpg")
 
     return [
         "ffmpeg",
         "-i",       str(input_path),
         "-ss",      "00:00:05",     # seek to 5 seconds
         "-vframes", "1",            # capture one frame
+        "-update",  "1",            # write a single image without sequence pattern
         "-y",                       # overwrite output without prompting
         str(output_path),
     ]

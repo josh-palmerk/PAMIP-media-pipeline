@@ -1,6 +1,6 @@
 {
-    "watch_directory": "/media/incoming",
-    "output_directory": "/media/processed",
+    "watch_directory": "./media/incoming",
+    "output_directory": "./media/processed",
     "allowed_extensions": [
         ".mp4",
         ".mkv",
