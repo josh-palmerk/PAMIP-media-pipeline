@@ -29,15 +29,15 @@ class PipelineEngine:
         __init__
         Args:
             step_configs (list[StepConfig]) — pipeline step definitions from config,
-                                              used to look up timeout_seconds per step
+                                              used to look up timeout_seconds and options
+                                              per step
             output_dir   (str)              — directory where processed files are written,
                                               passed to handlers so output never lands in
                                               the watch directory
         """
-        # Build a lookup of step_name -> timeout_seconds for quick access during execution
-        self._timeouts:   dict[str, int] = {
-            s.step_name: s.timeout_seconds for s in step_configs
-        }
+        # Build per-step lookups for quick access during execution
+        self._timeouts: dict[str, int]  = {s.step_name: s.timeout_seconds for s in step_configs}
+        self._options:  dict[str, dict] = {s.step_name: s.options          for s in step_configs}
         self.output_dir = output_dir
 
     def execute_step(self, step: Step, job: Job) -> dict:
@@ -73,7 +73,8 @@ class PipelineEngine:
             }
 
         # Build command from handler and run it
-        command         = handler(job.file_path, self.output_dir, job)
+        options         = self._options.get(step.step_name, {})
+        command         = handler(job.file_path, self.output_dir, job, options)
         timeout_seconds = self._timeouts.get(step.step_name, 60)
         result          = run_process(command, timeout_seconds)
 

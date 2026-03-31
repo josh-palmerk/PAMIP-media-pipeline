@@ -15,12 +15,17 @@ CONFIG_PATH = Path("config/config.json")
 DEFAULT_CONFIG = {
     "watch_directory": "./media/incoming",
     "output_directory": "./media/processed",
-    "allowed_extensions": [".mp4", ".mkv", ".jpg", ".png"],
+    "allowed_extensions": [".mp4", ".mkv", ".mov", ".jpg", ".jpeg", ".png"],
     "poll_interval_seconds": 5,
     "max_concurrent_jobs": 1,
     "pipeline": [
-        {"step_name": "transcode", "max_attempts": 3, "timeout_seconds": 300},
-        {"step_name": "thumbnail", "max_attempts": 2, "timeout_seconds": 60},
+        # Video steps — no-op automatically for image files
+        {"step_name": "transcode",      "max_attempts": 3, "timeout_seconds": 300},
+        {"step_name": "thumbnail",      "max_attempts": 2, "timeout_seconds": 60},
+        # Image steps — no-op automatically for video files
+        {"step_name": "image_convert",  "max_attempts": 2, "timeout_seconds": 60},
+        {"step_name": "image_compress", "max_attempts": 2, "timeout_seconds": 60,
+         "options": {"compress_threshold_mb": 2}},
     ]
 }
 
@@ -32,13 +37,16 @@ class StepConfig:
     Configuration for a single pipeline step.
 
     Fields:
-        step_name        (str) — unique name matching a registered step handler
-        max_attempts     (int) — maximum execution attempts before failure
-        timeout_seconds  (int) — seconds before the step is forcibly terminated
+        step_name        (str)  — unique name matching a registered step handler
+        max_attempts     (int)  — maximum execution attempts before failure
+        timeout_seconds  (int)  — seconds before the step is forcibly terminated
+        options          (dict) — optional step-specific parameters passed to the
+                                  handler at runtime (e.g. compress_threshold_mb)
     """
     step_name:       str
     max_attempts:    int
     timeout_seconds: int
+    options:         dict = field(default_factory=dict)
 
 
 @dataclass
@@ -118,6 +126,7 @@ def load_config() -> Config:
             step_name=      step["step_name"],
             max_attempts=   step["max_attempts"],
             timeout_seconds=step["timeout_seconds"],
+            options=        step.get("options", {}),
         )
         for step in raw["pipeline"]
     ]
