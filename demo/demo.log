@@ -1,2 +1,61 @@
 2026-04-03 16:58:09,916 [INFO] worker.loop: Worker starting.
 2026-04-03 16:59:14,143 [INFO] worker.loop: Worker starting.
+2026-04-03 21:41:20,074 [INFO] worker.loop: Worker starting.
+2026-04-03 21:41:20,186 [INFO] worker.loop: Created job 1 for file: demo\incoming\test_image.jpg
+2026-04-03 21:41:20,216 [INFO] worker.loop: Created job 2 for file: demo\incoming\test_image.png
+2026-04-03 21:41:20,249 [INFO] worker.loop: Created job 3 for file: demo\incoming\test_video.mkv
+2026-04-03 21:41:20,274 [INFO] worker.loop: Created job 4 for file: demo\incoming\test_video.mp4
+2026-04-03 21:41:20,275 [INFO] worker.loop: Dispatched job 1 to thread job-1
+2026-04-03 21:41:20,282 [INFO] worker.loop: Job 1 started.
+2026-04-03 21:41:20,733 [INFO] worker.loop: Job 1 completed. File moved to demo\processed\test_image.jpg
+2026-04-03 21:41:22,276 [INFO] worker.loop: Dispatched job 2 to thread job-2
+2026-04-03 21:41:22,283 [INFO] worker.loop: Job 2 started.
+2026-04-03 21:41:23,598 [INFO] worker.loop: Job 2 completed. File moved to demo\processed\test_image.png
+2026-04-03 21:41:24,279 [INFO] worker.loop: Dispatched job 3 to thread job-3
+2026-04-03 21:41:24,286 [INFO] worker.loop: Job 3 started.
+2026-04-03 21:41:25,414 [INFO] worker.loop: Job 3 completed. File moved to demo\processed\test_video.mkv
+2026-04-03 21:41:26,280 [INFO] worker.loop: Dispatched job 4 to thread job-4
+2026-04-03 21:41:26,288 [INFO] worker.loop: Job 4 started.
+2026-04-03 21:41:27,547 [INFO] worker.loop: Job 4 completed. File moved to demo\processed\test_video.mp4
+2026-04-03 21:41:34,284 [INFO] worker.loop: Worker stopped.
+2026-04-03 21:41:52,824 [INFO] worker.loop: Worker starting.
+2026-04-03 21:41:52,911 [INFO] worker.loop: Created job 5 for file: demo\incoming\test_image.jpg
+2026-04-03 21:41:52,935 [INFO] worker.loop: Created job 6 for file: demo\incoming\test_image.png
+2026-04-03 21:41:52,960 [INFO] worker.loop: Created job 7 for file: demo\incoming\test_video.mkv
+2026-04-03 21:41:53,216 [INFO] worker.loop: Created job 8 for file: demo\incoming\test_video.mp4
+2026-04-03 21:41:53,216 [INFO] worker.loop: Dispatched job 5 to thread job-5
+2026-04-03 21:41:53,223 [INFO] worker.loop: Job 5 started.
+2026-04-03 21:41:53,688 [INFO] worker.loop: Job 5 completed. File moved to demo\processed\test_image.jpg
+2026-04-03 21:41:55,217 [INFO] worker.loop: Worker stopped.
+2026-04-03 21:42:40,368 [INFO] worker.loop: Worker starting.
+2026-04-03 21:42:40,462 [INFO] worker.loop: Created job 9 for file: demo\incoming\test_image.png
+2026-04-03 21:42:40,492 [INFO] worker.loop: Created job 10 for file: demo\incoming\test_video.mkv
+2026-04-03 21:42:40,526 [INFO] worker.loop: Created job 11 for file: demo\incoming\test_video.mp4
+2026-04-03 21:42:40,526 [INFO] worker.loop: Dispatched job 6 to thread job-6
+2026-04-03 21:42:40,534 [INFO] worker.loop: Job 6 started.
+2026-04-03 21:42:41,202 [INFO] worker.loop: Job 6 completed. File moved to demo\processed\test_image.png
+2026-04-03 21:42:42,528 [INFO] worker.loop: Dispatched job 7 to thread job-7
+2026-04-03 21:42:42,535 [INFO] worker.loop: Job 7 started.
+2026-04-03 21:42:43,610 [INFO] worker.loop: Job 7 completed. File moved to demo\processed\test_video.mkv
+2026-04-03 21:42:44,530 [INFO] worker.loop: Dispatched job 8 to thread job-8
+2026-04-03 21:42:44,536 [INFO] worker.loop: Job 8 started.
+2026-04-03 21:42:45,617 [INFO] worker.loop: Job 8 completed. File moved to demo\processed\test_video.mp4
+2026-04-03 21:42:46,531 [INFO] worker.loop: Dispatched job 9 to thread job-9
+2026-04-03 21:42:46,539 [INFO] worker.loop: Job 9 started.
+2026-04-03 21:42:48,532 [INFO] worker.loop: Worker stopped.
+2026-04-03 21:43:24,060 [INFO] worker.loop: Worker starting.
+2026-04-03 21:43:24,061 [INFO] worker.loop: Dispatched job 9 to thread job-9
+2026-04-03 21:43:24,062 [INFO] worker.loop: Job 9 started.
+2026-04-03 21:43:26,064 [INFO] worker.loop: Dispatched job 10 to thread job-10
+2026-04-03 21:43:26,070 [INFO] worker.loop: Job 10 started.
+2026-04-03 21:43:28,064 [INFO] worker.loop: Worker stopped.
+2026-04-03 21:43:45,619 [INFO] worker.loop: Worker starting.
+2026-04-03 21:43:45,694 [INFO] worker.loop: Created job 12 for file: demo\incoming\test_video.mkv
+2026-04-03 21:43:45,694 [INFO] worker.loop: Dispatched job 11 to thread job-11
+2026-04-03 21:43:45,704 [INFO] worker.loop: Job 11 started.
+2026-04-03 21:43:47,695 [INFO] worker.loop: Dispatched job 12 to thread job-12
+2026-04-03 21:43:47,702 [INFO] worker.loop: Job 12 started.
+2026-04-03 21:43:49,697 [INFO] worker.loop: Worker stopped.
+2026-04-03 21:43:49,950 [INFO] worker.loop: Job 12 completed. File moved to demo\processed\test_video.mkv
+2026-04-03 21:43:50,631 [INFO] worker.loop: Worker starting.
+2026-04-03 21:43:56,636 [INFO] worker.loop: Worker stopped.
