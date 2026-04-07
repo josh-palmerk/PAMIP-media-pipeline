@@ -10,6 +10,7 @@ __pycache__/
 
 # Logs
 logs/
+*.log
 
 # Config (user-specific, auto-generated)
 config/config.json

@@ -2,7 +2,8 @@
 demo.py
 Live demonstration script for PAMIP.
 Walks through all functional requirements in a presenter-controlled,
-section-by-section format. Each section pauses for a keypress before running.
+section-by-section format. Each section runs immediately when the
+presenter presses ENTER.
 
 Usage (run from the pamip/ project root):
     python demo.py
@@ -15,18 +16,14 @@ Prerequisites:
         test_video.mp4
         test_video.mkv
 
-The script manages its own database (demo/demo.db) and directory structure
+The script manages its own database (demo/demo.db) and directories
 so it does not interfere with the production database (pamip.db).
 """
 
-import os
 import sys
 import shutil
-import signal
-import sqlite3
 import threading
 import time
-from contextlib import contextmanager
 from pathlib import Path
 
 
@@ -34,31 +31,20 @@ from pathlib import Path
 # Paths — all demo I/O is isolated under demo/
 # ============================================================
 
-DEMO_ROOT    = Path("demo")
-MEDIA_DIR    = DEMO_ROOT / "media"       # presenter drops files here
-WATCH_DIR    = DEMO_ROOT / "incoming"    # worker monitors this
-OUTPUT_DIR   = DEMO_ROOT / "processed"  # completed files land here
-DB_PATH      = str(DEMO_ROOT / "demo.db")
+DEMO_ROOT  = Path("demo")
+MEDIA_DIR  = DEMO_ROOT / "media"       # presenter-provided source files
+WATCH_DIR  = DEMO_ROOT / "incoming"    # worker monitors this
+OUTPUT_DIR = DEMO_ROOT / "processed"   # completed files land here
+DB_PATH    = str(DEMO_ROOT / "demo.db")
+
+# Flag file used by the fail_once step (Section 4/5)
+FAIL_FLAG  = DEMO_ROOT / "fail_once.flag"
 
 # Source media the presenter provides
-SRC_PNG  = MEDIA_DIR / "test_image.png"
-SRC_JPG  = MEDIA_DIR / "test_image.jpg"
-SRC_MP4  = MEDIA_DIR / "test_video.mp4"
-SRC_MKV  = MEDIA_DIR / "test_video.mkv"
-
-
-# ============================================================
-# Minimal in-memory-compatible Database for the demo
-# (same interface as db/database.py, points at demo.db)
-# ============================================================
-
-def _make_db():
-    """Open a fresh Database connection to demo.db."""
-    from db.database import Database
-    from db import schema
-    db = Database(DB_PATH)
-    schema.initialize_schema(db)
-    return db
+SRC_PNG = MEDIA_DIR / "test_image.png"
+SRC_JPG = MEDIA_DIR / "test_image.jpg"
+SRC_MP4 = MEDIA_DIR / "test_video.mp4"
+SRC_MKV = MEDIA_DIR / "test_video.mkv"
 
 
 # ============================================================
@@ -76,7 +62,7 @@ DIVIDER = "=" * 64
 
 
 def header(title: str, frs: str):
-    """Print a section header with FR labels."""
+    """Print a coloured section header with FR labels."""
     print(f"\n{BOLD}{CYAN}{DIVIDER}{RESET}")
     print(f"{BOLD}{CYAN}  {title}{RESET}")
     print(f"{CYAN}  Demonstrates: {frs}{RESET}")
@@ -107,23 +93,6 @@ def run_cli(label: str, fn, *args):
     fn(*args)
 
 
-def wait_for_jobs(job_repo, job_ids: list[int], timeout: int = 300) -> bool:
-    """
-    wait_for_jobs
-    Polls until all specified jobs reach a terminal state (completed or failed),
-    or until the timeout elapses.
-
-    Returns True if all jobs finished, False if timeout was reached.
-    """
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        jobs = [job_repo.get_job(jid) for jid in job_ids]
-        if all(j and j.status in ("completed", "failed") for j in jobs):
-            return True
-        time.sleep(2)
-    return False
-
-
 def copy_to_watch(src: Path, label: str) -> Path:
     """Copy a source media file into the watch directory."""
     dst = WATCH_DIR / src.name
@@ -132,21 +101,30 @@ def copy_to_watch(src: Path, label: str) -> Path:
     return dst
 
 
+def _make_db():
+    """Open a fresh Database connection to demo.db on the calling thread."""
+    from db.database import Database
+    from db import schema
+    db = Database(DB_PATH)
+    schema.initialize_schema(db)
+    return db
+
+
 # ============================================================
 # Worker management
 # ============================================================
 
-def _start_worker(step_configs, suppress_output=True) -> tuple:
+def _start_worker(step_configs) -> tuple:
     """
     _start_worker
     Builds and starts a WorkerLoop in a background thread.
     All SQLite objects are created inside the worker thread — SQLite
     connections cannot be shared across threads.
-    Suppresses worker print output during processing to keep the
-    demo terminal readable; logs still go to demo/demo.log.
+    Worker print output is suppressed so ffmpeg noise doesn't scroll
+    over the demo terminal. All activity is captured in demo/demo.log.
 
-    Returns (loop, thread). Caller is responsible for calling loop.stop().
-    The main thread should open its own separate DB connection for reads.
+    Returns (loop, thread). Caller must call _stop_worker() when done.
+    The main thread should open its own DB connection for any reads.
     """
     import io
     from db.database import Database
@@ -162,16 +140,16 @@ def _start_worker(step_configs, suppress_output=True) -> tuple:
         allowed_extensions=[".mp4", ".mkv", ".mov", ".jpg", ".jpeg", ".png"],
     )
 
-    # ready lets the main thread wait until loop exists before returning it
+    # ready signals the main thread once the loop object exists
     ready       = threading.Event()
-    loop_holder = [None]  # mutable container so _run() can write back
+    loop_holder = [None]
 
     class _NullWriter(io.IOBase):
         def write(self, *a): return 0
         def flush(self):     pass
 
     def _run():
-        # All DB objects created here, inside the worker thread
+        # All DB objects must be created inside the worker thread
         db        = Database(DB_PATH)
         job_repo  = JobRepository(db)
         step_repo = StepRepository(db)
@@ -188,33 +166,68 @@ def _start_worker(step_configs, suppress_output=True) -> tuple:
             max_concurrent_jobs= 4,
         )
         loop_holder[0] = loop
-        ready.set()  # signal main thread that loop is available
+        ready.set()
 
-        if suppress_output:
-            old, sys.stdout = sys.stdout, _NullWriter()
+        # Suppress stdout so ffmpeg progress lines don't clutter the demo.
+        # stderr from subprocesses bypasses Python's sys.stdout entirely
+        # and is silenced by passing subprocess.DEVNULL in run_process.
+        old, sys.stdout = sys.stdout, _NullWriter()
         try:
             loop.start()
         finally:
-            if suppress_output:
-                sys.stdout = old
+            sys.stdout = old
             db.close()
 
     thread = threading.Thread(target=_run, daemon=True, name="worker")
     thread.start()
-
-    # Block until the loop object is ready before returning it to the caller
     ready.wait(timeout=10)
     return loop_holder[0], thread
 
 
 def _stop_worker(loop, thread):
-    """Signal the worker to stop and wait for it to exit."""
+    """Signal the worker to stop and wait for it to exit cleanly."""
     loop.stop()
     thread.join(timeout=10)
 
 
+def _wait_for_n_jobs(job_repo, n: int, timeout: int = 30) -> list:
+    """
+    _wait_for_n_jobs
+    Polls until at least n jobs exist in the DB, then returns them.
+    Used to confirm the worker has detected and created jobs before
+    proceeding with assertions.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        jobs = job_repo.list_jobs()
+        if len(jobs) >= n:
+            return jobs
+        time.sleep(1)
+    return job_repo.list_jobs()
+
+
+def _wait_for_terminal(job_repo, min_jobs: int, timeout: int = 300) -> list:
+    """
+    _wait_for_terminal
+    Polls until at least min_jobs exist and all are in a terminal state
+    (completed or failed). Prints a live counter. Returns the final job list.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        jobs = job_repo.list_jobs()
+        done = [j for j in jobs if j.status in ("completed", "failed")]
+        sys.stdout.write(f"\r  Jobs finished: {len(done)}/{len(jobs)}   ")
+        sys.stdout.flush()
+        if len(jobs) >= min_jobs and len(done) == len(jobs):
+            print()
+            return jobs
+        time.sleep(2)
+    print()
+    return job_repo.list_jobs()
+
+
 # ============================================================
-# Step configs — normal and with a bad step injected
+# Pipeline configurations
 # ============================================================
 
 def _normal_pipeline():
@@ -227,27 +240,82 @@ def _normal_pipeline():
     ]
 
 
-def _broken_pipeline():
-    """Pipeline with an unregistered step name to force a clean failure."""
+def _fail_once_pipeline(fail_once_max_attempts: int = 1):
+    """
+    Pipeline used for Sections 4 & 5.
+    Step 2 is 'fail_once' — a registered handler that fails on its first
+    call (via a flag file) and succeeds on subsequent calls.
+
+    Section 4 passes max_attempts=1 so the step exhausts retries immediately
+    and the job transitions to failed with no automatic retry.
+
+    Section 5 uses cmd_retry to manually reset the failed job to pending.
+    The step then runs again, finds the flag present, and succeeds. The
+    max_attempts passed here doesn't matter for Section 5 because the step
+    only needs one more attempt — but keeping it at 1 is cleaner.
+
+    Args:
+        fail_once_max_attempts (int) — max_attempts for the fail_once step
+    """
     from config import StepConfig
     return [
-        StepConfig("transcode",    1, 300, {}),
-        StepConfig("nonexistent_step", 1, 60, {}),  # will hit KeyError in engine
-        StepConfig("thumbnail",    1, 60,  {}),
+        StepConfig("transcode",  1, 300, {}),
+        StepConfig("fail_once",  fail_once_max_attempts, 60, {}),
+        StepConfig("thumbnail",  1, 60,  {}),
     ]
 
 
-def _slow_pipeline():
+def _sleep_pipeline():
     """
-    Pipeline for the crash recovery demo.
-    Uses -preset veryslow so the transcode takes long enough to interrupt.
-    Requires a custom engine subclass to inject the extra ffmpeg flag.
+    Pipeline for Section 6 (crash recovery).
+    Uses a 'long_sleep' step that runs a 30-second Python sleep subprocess —
+    guaranteed to be interruptible regardless of media file length or hardware.
     """
     from config import StepConfig
     return [
-        StepConfig("transcode_slow", 1, 600, {}),
-        StepConfig("thumbnail",      1, 60,  {}),
+        StepConfig("long_sleep", 1, 120, {}),
     ]
+
+
+# ============================================================
+# Demo-only step handler registration
+# ============================================================
+
+def _register_demo_steps():
+    """
+    _register_demo_steps
+    Registers step handlers used only in the demo. Called once at startup
+    so they are available to any worker started during the session.
+    """
+    from pipeline.steps import register_step
+    from jobs.models import Job
+
+    @register_step("fail_once")
+    def handle_fail_once(file_path: str, output_dir: str, job: Job, options: dict) -> list:
+        """
+        Fails on the first execution by checking for a flag file.
+        On first call: creates the flag and returns a failing command.
+        On subsequent calls: flag exists, removes it, returns a no-op success.
+        This lets Section 4 show a clean failure and Section 5 show a
+        successful retry without any changes to step definitions.
+        """
+        if not FAIL_FLAG.exists():
+            # First call — write the flag and return a command that exits non-zero
+            FAIL_FLAG.touch()
+            return ["python", "-c", "import sys; sys.exit(1)"]
+        else:
+            # Subsequent call — remove the flag and succeed
+            FAIL_FLAG.unlink()
+            return ["python", "-c", ""]
+
+    @register_step("long_sleep")
+    def handle_long_sleep(file_path: str, output_dir: str, job: Job, options: dict) -> list:
+        """
+        Runs a 30-second Python sleep subprocess.
+        Used in Section 6 to give the crash simulation enough time to
+        interrupt the worker while a job is mid-execution.
+        """
+        return ["python", "-c", "import time; time.sleep(30)"]
 
 
 # ============================================================
@@ -267,7 +335,6 @@ def section_setup():
             warn(f"Missing: {m}")
         print(f"\n  {RED}Place the required files in demo/media/ and re-run.{RESET}\n")
         sys.exit(1)
-
     success("All media files found.")
 
     info("Creating demo directories...")
@@ -280,6 +347,10 @@ def section_setup():
     db = _make_db()
     db.close()
     success(f"Database:   {DB_PATH}")
+
+    # Clean up any leftover flag from a previous run
+    if FAIL_FLAG.exists():
+        FAIL_FLAG.unlink()
 
     info("\nPipeline configured with 4 steps:")
     for cfg in _normal_pipeline():
@@ -297,50 +368,55 @@ def section_detection():
         "FR-3 (file type filtering), FR-4 (job creation), FR-5 (unique IDs)"
     )
 
-    info("Dropping test_image.png and test_video.mp4 into the watch directory.")
-    info("Worker will detect them within one poll cycle (2 s).\n")
+    from db.job_repository import JobRepository
+    from cli.commands import cmd_list
+
+    info("Starting worker and dropping files into the watch directory.")
+    info("Worker polls every 2 seconds — jobs will appear shortly.\n")
+
+    # Start worker first, then drop files so detection is visible
+    loop, thread = _start_worker(_normal_pipeline())
 
     copy_to_watch(SRC_PNG, "test_image.png")
     copy_to_watch(SRC_MP4, "test_video.mp4")
 
-    loop, thread = _start_worker(_normal_pipeline())
-
     info("\nWaiting for worker to detect files and create jobs...")
-    time.sleep(5)
-
-    from db.job_repository import JobRepository
-    db2      = _make_db()
+    db2       = _make_db()
     job_repo2 = JobRepository(db2)
-    jobs     = job_repo2.list_jobs()
 
-    if jobs:
-        success(f"{len(jobs)} job(s) created in the database.\n")
-        from cli.commands import cmd_list
+    # Block until both jobs are created
+    jobs = _wait_for_n_jobs(job_repo2, n=2, timeout=15)
+
+    if len(jobs) >= 2:
+        success(f"{len(jobs)} job(s) created — unique IDs: {[j.id for j in jobs]} (FR-4, FR-5)\n")
         run_cli("list", cmd_list, job_repo2)
     else:
-        warn("No jobs detected yet — worker may still be starting.")
+        warn(f"Only {len(jobs)} job(s) detected within timeout.")
 
     info("\nFR-2 check: dropping the same files again — no new jobs should appear.")
     copy_to_watch(SRC_PNG, "test_image.png (duplicate)")
     copy_to_watch(SRC_MP4, "test_video.mp4 (duplicate)")
-    time.sleep(4)
+    time.sleep(5)
 
     jobs_after = job_repo2.list_jobs()
     if len(jobs_after) == len(jobs):
         success("Duplicate files produced no new jobs. (FR-2)")
     else:
-        warn(f"Job count changed: {len(jobs)} → {len(jobs_after)}")
+        warn(f"Job count changed unexpectedly: {len(jobs)} → {len(jobs_after)}")
 
     info("\nFR-3 check: dropping an unsupported file type (.txt).")
-    txt_file = WATCH_DIR / "readme.txt"
-    txt_file.write_text("this should be ignored")
-    time.sleep(4)
+    (WATCH_DIR / "readme.txt").write_text("this should be ignored")
+    time.sleep(5)
 
     jobs_final = job_repo2.list_jobs()
     if len(jobs_final) == len(jobs):
         success(".txt file produced no job. (FR-3)")
     else:
         warn("Unexpected job created for unsupported file type.")
+
+    # Let the worker finish the two jobs cleanly before Section 3 starts
+    info("\nWaiting for jobs to complete before next section...")
+    _wait_for_terminal(job_repo2, min_jobs=2)
 
     _stop_worker(loop, thread)
     db2.close()
@@ -358,8 +434,14 @@ def section_pipeline():
         "FR-13 (ffmpeg invocation), FR-14 (output capture)"
     )
 
+    from db.job_repository import JobRepository
+    from db.step_repository import StepRepository
+    from cli.commands import cmd_list, cmd_show
+
     info("Dropping all four media files and letting the worker run to completion.")
-    info("ffmpeg output is suppressed here — captured output is visible via 'pamip show'.\n")
+    info("ffmpeg output is suppressed — captured stdout/stderr visible via 'pamip show'.\n")
+
+    loop, thread = _start_worker(_normal_pipeline())
 
     for src, label in [
         (SRC_PNG, "test_image.png"),
@@ -369,48 +451,36 @@ def section_pipeline():
     ]:
         copy_to_watch(src, label)
 
-    loop, thread = _start_worker(_normal_pipeline())
+    info("\nProcessing... (this may take a minute for video files)")
 
-    info("Processing... (this may take a minute for video files)")
-
-    # Collect job IDs as they are created
     db2       = _make_db()
-    from db.job_repository import JobRepository
-    from db.step_repository import StepRepository
-    job_repo2  = JobRepository(db2)
+    job_repo2 = JobRepository(db2)
     step_repo2 = StepRepository(db2)
 
-    # Wait up to 5 minutes for all jobs to finish
-    deadline = time.time() + 300
-    while time.time() < deadline:
-        jobs = job_repo2.list_jobs()
-        done = [j for j in jobs if j.status in ("completed", "failed")]
-        sys.stdout.write(f"\r  Jobs finished: {len(done)}/{len(jobs)}   ")
-        sys.stdout.flush()
-        if len(jobs) >= 4 and len(done) == len(jobs):
-            break
-        time.sleep(3)
-    print()
-
+    jobs = _wait_for_terminal(job_repo2, min_jobs=4)
     _stop_worker(loop, thread)
 
-    jobs = job_repo2.list_jobs()
     success(f"All {len(jobs)} jobs reached a terminal state.\n")
 
-    from cli.commands import cmd_list, cmd_show
     run_cli("list", cmd_list, job_repo2)
 
-    info("\nShowing step detail for each job (FR-9 step order, FR-10 status, FR-14 output):\n")
-    for job in sorted(jobs, key=lambda j: j.id):
+    # Only show jobs from this section (exclude Section 2 jobs)
+    section3_jobs = sorted(
+        [j for j in jobs if j.status in ("completed", "failed") and
+         any(f in j.file_path for f in ["jpg", "png", "mp4", "mkv"])],
+        key=lambda j: j.id
+    )
+
+    info("\nStep detail for each job (FR-9 order, FR-10 status, FR-14 captured output):\n")
+    for job in section3_jobs[-4:]:  # show the 4 most recent
         run_cli(f"show {job.id}", cmd_show, job_repo2, step_repo2, job.id)
 
-    info("Verifying output files exist in processed directory:")
-    outputs = list(OUTPUT_DIR.iterdir()) if OUTPUT_DIR.exists() else []
-    if outputs:
-        for f in sorted(outputs):
-            success(f"  {f.name}")
-    else:
-        warn("No output files found — check logs.")
+    info("Output files in processed directory:")
+    outputs = sorted(OUTPUT_DIR.iterdir()) if OUTPUT_DIR.exists() else []
+    for f in outputs:
+        success(f"  {f.name}")
+    if not outputs:
+        warn("No output files found — check demo/demo.log")
 
     db2.close()
 
@@ -425,32 +495,41 @@ def section_failure():
         "FR-11 (failed step stops pipeline)"
     )
 
-    info("Dropping test_video.mkv with a broken pipeline.")
-    info("Step 1 (transcode) will succeed.")
-    info("Step 2 ('nonexistent_step') is not registered — engine will fail it.")
-    info("Step 3 (thumbnail) must not run.\n")
-
-    copy_to_watch(SRC_MKV, "test_video.mkv (failure demo)")
-
-    loop, thread = _start_worker(_broken_pipeline())
-
-    db2       = _make_db()
     from db.job_repository import JobRepository
     from db.step_repository import StepRepository
+    from cli.commands import cmd_show
+
+    info("Dropping test_image.png with a modified pipeline:")
+    info("  Step 1 — transcode    (will succeed)")
+    info("  Step 2 — fail_once    (will fail — max_attempts=1, no retry)")
+    info("  Step 3 — thumbnail    (must NOT run)\n")
+
+    # Ensure the flag is clear so fail_once fails on its first call
+    if FAIL_FLAG.exists():
+        FAIL_FLAG.unlink()
+
+    # Clear the watch dir to avoid picking up leftovers from Section 3
+    for f in WATCH_DIR.iterdir():
+        if f.is_file():
+            f.unlink()
+
+    copy_to_watch(SRC_PNG, "test_image.png")
+
+    # max_attempts=1 — step exhausts retries on first failure, no automatic retry
+    loop, thread = _start_worker(_fail_once_pipeline(fail_once_max_attempts=1))
+
+    db2        = _make_db()
     job_repo2  = JobRepository(db2)
     step_repo2 = StepRepository(db2)
 
     info("Waiting for job to fail...")
-    deadline = time.time() + 120
-    job_id = None
+    deadline = time.time() + 60
+    job_id   = None
     while time.time() < deadline:
-        jobs = [j for j in job_repo2.list_jobs() if j.status in ("completed", "failed")]
-        if jobs:
-            # Take the most recently created failed job
-            failed = [j for j in jobs if j.status == "failed"]
-            if failed:
-                job_id = failed[-1].id
-                break
+        failed = [j for j in job_repo2.list_jobs() if j.status == "failed"]
+        if failed:
+            job_id = failed[-1].id
+            break
         time.sleep(2)
 
     _stop_worker(loop, thread)
@@ -460,15 +539,14 @@ def section_failure():
         db2.close()
         return
 
-    from cli.commands import cmd_show
     run_cli(f"show {job_id}", cmd_show, job_repo2, step_repo2, job_id)
 
     steps = step_repo2.get_steps_for_job(job_id)
-    thumbnail_step = next((s for s in steps if s.step_name == "thumbnail"), None)
-    if thumbnail_step and thumbnail_step.status == "pending":
-        success("thumbnail step was never run — failure propagation confirmed. (FR-11)")
+    thumbnail = next((s for s in steps if s.step_name == "thumbnail"), None)
+    if thumbnail and thumbnail.status == "pending":
+        success("thumbnail step never ran — failure propagation confirmed. (FR-11)")
     else:
-        warn("Unexpected thumbnail step state.")
+        warn(f"Unexpected thumbnail status: {thumbnail.status if thumbnail else 'not found'}")
 
     db2.close()
 
@@ -480,41 +558,55 @@ def section_failure():
 def section_retry():
     header(
         "Section 5 — Manual Retry",
-        "FR-8 (retry support), FR-21 (pamip retry command)"
+        "FR-8 (automatic retry), FR-21 (pamip retry command)"
     )
 
-    info("Retrying the failed job from Section 4 with the correct pipeline.\n")
-
-    db2       = _make_db()
     from db.job_repository import JobRepository
     from db.step_repository import StepRepository
-    job_repo2  = JobRepository(db2)
+    from cli.commands import cmd_retry, cmd_show
+
+    info("Retrying the failed job from Section 4.")
+    info("The fail_once step now has max_attempts=2 — it failed once already,")
+    info("so this retry attempt will succeed.\n")
+
+    db2       = _make_db()
+    job_repo2 = JobRepository(db2)
     step_repo2 = StepRepository(db2)
 
-    # Find the most recent failed job
     failed_jobs = [j for j in job_repo2.list_jobs() if j.status == "failed"]
     if not failed_jobs:
-        warn("No failed jobs to retry. Run Section 4 first.")
+        warn("No failed jobs found. Run Section 4 first.")
         db2.close()
         return
 
-    job_id = failed_jobs[0].id
+    job_id = failed_jobs[-1].id
     info(f"Found failed job: ID {job_id}")
 
-    from cli.commands import cmd_retry, cmd_show
     run_cli(f"retry {job_id}", cmd_retry, db2, job_repo2, step_repo2, job_id)
 
-    info(f"\nJob {job_id} is now pending. Starting worker with the correct pipeline...")
+    info(f"\nJob {job_id} reset to pending. Starting worker...")
 
-    loop, thread = _start_worker(_normal_pipeline())
+    # Clear watch dir — the original file was moved to processed already.
+    # Re-drop it so the job has a real file to work with on retry.
+    job      = job_repo2.get_job(job_id)
+    src_file = Path(job.file_path)
+    if not src_file.exists():
+        # File was moved to processed — copy it back for the retry
+        processed = OUTPUT_DIR / src_file.name
+        if processed.exists():
+            shutil.copy(processed, src_file)
+
+    # max_attempts=1 — the step already consumed its one attempt in Section 4.
+    # cmd_retry reset it to pending; this run will succeed (flag is present from Section 4).
+    loop, thread = _start_worker(_fail_once_pipeline(fail_once_max_attempts=1))
 
     info("Waiting for retry to complete...")
-    deadline = time.time() + 300
+    deadline = time.time() + 120
     while time.time() < deadline:
-        job = job_repo2.get_job(job_id)
-        if job and job.status in ("completed", "failed"):
+        j = job_repo2.get_job(job_id)
+        if j and j.status in ("completed", "failed"):
             break
-        time.sleep(3)
+        time.sleep(2)
 
     _stop_worker(loop, thread)
 
@@ -522,9 +614,10 @@ def section_retry():
 
     job = job_repo2.get_job(job_id)
     if job and job.status == "completed":
-        success(f"Job {job_id} completed after retry. retry_count={job.retry_count} (FR-8, FR-21)")
+        success(f"Job {job_id} completed after retry. (FR-8, FR-21)")
     else:
-        warn(f"Job {job_id} did not complete — status: {job.status if job else 'unknown'}")
+        status = job.status if job else "unknown"
+        warn(f"Job {job_id} status after retry: {status}")
 
     db2.close()
 
@@ -539,83 +632,97 @@ def section_crash_recovery():
         "FR-17 (orphaned job recovery)"
     )
 
-    info("Registering a slow transcode step (-preset veryslow).")
-    info("We will drop a video, let the worker start processing it,")
-    info("then kill the worker mid-job to simulate a crash.")
-    info("On restart, the orphaned 'running' job must be re-queued.\n")
-
-    # Register the slow transcode handler for this demo section only
-    from pipeline.steps import register_step, _noop_command
-    from jobs.models import Job
-
-    @register_step("transcode_slow")
-    def handle_transcode_slow(file_path: str, output_dir: str, job: Job, options: dict):
-        from pathlib import Path
-        input_path = Path(file_path)
-        _VIDEO_EXTS = {".mp4", ".mov", ".mkv"}
-        if input_path.suffix.lower() not in _VIDEO_EXTS:
-            return _noop_command()
-        output_path = Path(output_dir) / (input_path.stem + "_slow_transcoded.mp4")
-        return [
-            "ffmpeg",
-            "-i",     str(input_path),
-            "-c:v",   "libx264",
-            "-preset","veryslow",   # deliberately slow for demo purposes
-            "-c:a",   "aac",
-            "-y",
-            str(output_path),
-        ]
-
-    copy_to_watch(SRC_MKV, "test_video.mkv (crash demo)")
-
-    loop, thread = _start_worker(_slow_pipeline())
-
-    # Wait until the job is in 'running' state before simulating crash
-    db2      = _make_db()
     from db.job_repository import JobRepository
+    from cli.commands import cmd_show
+
+    info("The 'long_sleep' step runs a 30-second subprocess.")
+    info("We will drop a file, wait for the job to start, then kill")
+    info("the worker mid-execution to simulate a crash.")
+    info("On restart the orphaned 'running' job must be re-queued.\n")
+
+    # Clear watch dir
+    for f in WATCH_DIR.iterdir():
+        if f.is_file():
+            f.unlink()
+
+    copy_to_watch(SRC_PNG, "test_image.png (crash demo)")
+
+    loop, thread = _start_worker(_sleep_pipeline())
+
+    db2       = _make_db()
     job_repo2 = JobRepository(db2)
 
     info("Waiting for job to enter 'running' state...")
-    job_id = None
-    deadline = time.time() + 60
+    job_id      = None
+    orphan_thread = None
+    deadline    = time.time() + 30
     while time.time() < deadline:
-        jobs = [j for j in job_repo2.list_jobs() if j.status == "running"]
-        if jobs:
-            job_id = jobs[0].id
-            success(f"Job {job_id} is running. Simulating crash now.\n")
+        running = [j for j in job_repo2.list_jobs() if j.status == "running"]
+        if running:
+            job_id = running[0].id
+            # Capture the job thread so we can join it later and avoid a
+            # completed->completed race when the second worker also processes
+            # this job after crash recovery.
+            with loop._lock:
+                orphan_thread = loop._active.get(job_id)
+            success(f"Job {job_id} is now running.\n")
             break
         time.sleep(1)
 
     if job_id is None:
-        warn("Job never entered running state within timeout.")
+        warn("Job never entered running state — check demo/demo.log.")
         _stop_worker(loop, thread)
         db2.close()
         return
 
-    # Kill the worker thread abruptly (stop without waiting for jobs to finish)
-    loop.running = False  # bypass stop() — simulate ungraceful shutdown
-    time.sleep(2)
+    info("Simulating crash — killing worker without waiting for job to finish...")
+    # Set running=False directly rather than calling stop(), which would
+    # wait for active jobs. The job thread keeps running briefly then orphans.
+    loop.running = False
 
-    job_after_crash = job_repo2.get_job(job_id)
-    info(f"After crash — job {job_id} status: {job_after_crash.status}")
-    info("(still 'running' because the worker was killed before it could update state)\n")
+    # Wait for the poll loop thread to exit. The job thread is still alive
+    # (sleeping for 30s), but we do NOT join it — we want it to orphan.
+    thread.join(timeout=10)
 
-    info("Restarting worker. Recovery should detect the orphaned job and re-queue it...")
+    job_after = job_repo2.get_job(job_id)
+    info(f"Worker killed. Job {job_id} status in DB: '{job_after.status}'")
+    info("(Job is still 'running' — the worker never got to update its state)\n")
 
-    loop2, thread2 = _start_worker(_slow_pipeline())
+    # Remove the file from the watch dir before restarting. The second
+    # worker starts a fresh FileWatcher with an empty _seen set, so it
+    # would re-detect any file still sitting there and create a duplicate
+    # job — whose file move would then fail because the first job already
+    # moved or is still using it.
+    crash_file = WATCH_DIR / SRC_PNG.name
+    if crash_file.exists():
+        crash_file.unlink()
 
-    # Give recovery a moment to run
-    time.sleep(5)
+    info("Restarting worker. Crash recovery runs on startup...")
+    loop2, thread2 = _start_worker(_sleep_pipeline())
+
+    # Give recovery a few seconds to detect and reset the orphan
+    time.sleep(6)
 
     job_recovered = job_repo2.get_job(job_id)
     if job_recovered and job_recovered.status == "pending":
-        success(f"Job {job_id} was reset to 'pending' by crash recovery. (FR-17)")
+        success(f"Job {job_id} reset to 'pending' by crash recovery. (FR-17)")
     elif job_recovered and job_recovered.status in ("running", "completed"):
-        success(f"Job {job_id} was recovered and is now '{job_recovered.status}'. (FR-17)")
+        success(f"Job {job_id} recovered — now '{job_recovered.status}'. (FR-17)")
     else:
-        warn(f"Unexpected status after recovery: {job_recovered.status if job_recovered else 'unknown'}")
+        warn(f"Unexpected status: {job_recovered.status if job_recovered else 'unknown'}")
 
+    # Wait for the second worker (and any job threads it spawned) to finish
+    # cleanly before returning. This also lets the original orphaned job
+    # thread complete so it doesn't race against anything in later sections.
     _stop_worker(loop2, thread2)
+
+    # Join the original orphaned thread (still sleeping for up to 30s).
+    # Without this, it wakes up after Section 6 ends and tries to complete
+    # a job that the second worker already completed, causing a
+    # completed->completed ValueError in the log.
+    if orphan_thread and orphan_thread.is_alive():
+        info("Waiting for orphaned job thread to finish (up to 35s)...")
+        orphan_thread.join(timeout=35)
     db2.close()
 
 
@@ -629,20 +736,19 @@ def section_stats():
         "FR-18 (historical records), FR-19 (pamip list), FR-22 (pamip stats)"
     )
 
-    info("Displaying full job history across all demo sections.\n")
+    from db.job_repository import JobRepository
+    from cli.commands import cmd_list, cmd_stats
+
+    info("Displaying full job history accumulated across all demo sections.\n")
 
     db2       = _make_db()
-    from db.job_repository import JobRepository
-    from db.step_repository import StepRepository
-    job_repo2  = JobRepository(db2)
-    step_repo2 = StepRepository(db2)
+    job_repo2 = JobRepository(db2)
 
-    from cli.commands import cmd_list, cmd_stats
     run_cli("list", cmd_list, job_repo2)
     run_cli("stats", cmd_stats, job_repo2)
 
     jobs = job_repo2.list_jobs()
-    success(f"All {len(jobs)} jobs remain in the database across session restarts. (FR-18)")
+    success(f"All {len(jobs)} jobs persist in the database across worker restarts. (FR-18)")
 
     db2.close()
 
@@ -658,20 +764,14 @@ def section_cleanup():
 
     answer = input("  Clean up demo database and directories? [y/N] ").strip().lower()
     if answer == "y":
-        shutil.rmtree(DEMO_ROOT / "incoming", ignore_errors=True)
-        shutil.rmtree(DEMO_ROOT / "processed", ignore_errors=True)
-        db_file = Path(DB_PATH)
-        if db_file.exists():
-            db_file.unlink()
-        # Also remove WAL/SHM sidecar files if present
-        for ext in ["-wal", "-shm"]:
-            sidecar = Path(DB_PATH + ext)
-            if sidecar.exists():
-                sidecar.unlink()
+        shutil.rmtree(WATCH_DIR,  ignore_errors=True)
+        shutil.rmtree(OUTPUT_DIR, ignore_errors=True)
+        for p in [Path(DB_PATH), Path(DB_PATH + "-wal"), Path(DB_PATH + "-shm"), FAIL_FLAG]:
+            if p.exists():
+                p.unlink()
         success("Demo environment cleaned up.")
     else:
         info("Demo files left intact.")
-
     print()
 
 
@@ -691,14 +791,16 @@ SECTIONS = [
 
 
 def main():
-    # Set up logging to file so suppressed worker output is still captured
     import logging
-    Path("demo").mkdir(exist_ok=True)
+    DEMO_ROOT.mkdir(exist_ok=True)
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         handlers=[logging.FileHandler("demo/demo.log")],
     )
+
+    # Register demo-only step handlers before any worker starts
+    _register_demo_steps()
 
     print(f"\n{BOLD}{CYAN}{DIVIDER}{RESET}")
     print(f"{BOLD}{CYAN}  PAMIP — Live Demonstration{RESET}")
