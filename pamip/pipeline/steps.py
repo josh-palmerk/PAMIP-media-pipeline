@@ -134,6 +134,7 @@ def handle_transcode(file_path: str, output_dir: str, job: Job, options: dict) -
 
     return [
         "ffmpeg",
+        "-loglevel", "quiet",
         "-i",   str(input_path),
         "-c:v", "libx264",      # video codec: H.264
         "-c:a", "aac",          # audio codec: AAC
@@ -167,6 +168,7 @@ def handle_thumbnail(file_path: str, output_dir: str, job: Job, options: dict) -
 
     return [
         "ffmpeg",
+        "-loglevel", "quiet",
         "-i",       str(input_path),
         "-ss",      "00:00:05",     # seek to 5 seconds
         "-vframes", "1",            # capture one frame
@@ -201,6 +203,7 @@ def handle_image_convert(file_path: str, output_dir: str, job: Job, options: dic
 
     return [
         "ffmpeg",
+        "-loglevel", "quiet",
         "-i",   str(input_path),
         "-q:v", "2",            # JPEG quality: 1 (best) – 31 (worst); 2 is near-lossless
         "-y",
@@ -247,6 +250,7 @@ def handle_image_compress(file_path: str, output_dir: str, job: Job, options: di
 
     return [
         "ffmpeg",
+        "-loglevel", "quiet",
         "-i",   str(input_path),
         "-q:v", "4",            # slightly more compression than image_convert
         "-y",

@@ -3,7 +3,7 @@
 ## General
 [] Ensure OS & pathing is universally compatible
 [x] Make different steps run for different file types; different pipelines, essentially
-[] Make this^ not hard-coded
+[x] Make this^ not hard-coded
 [] Make the processing of same-named files a config flag set to false by default (since the process involves moving them)
 [] Adaptability: make move_file its own step run after all steps finish, without creating new jobs from the lingering file. Maybe tack it on the back of every job config
 [] Add test runner / automation suite
