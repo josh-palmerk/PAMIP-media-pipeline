@@ -43,8 +43,8 @@ class Step:
     stderr:         str | None
 
     @classmethod
-    def from_row(cls, row: sqlite3.Row) -> "Job":
-        """ Returns a Job object from a given sqlite3 row. """
+    def from_row(cls, row: sqlite3.Row) -> "Step":
+        """ Returns a Step object from a given sqlite3 row. """
         return cls(
             id=             row["id"],
             job_id=         row["job_id"],

@@ -99,7 +99,7 @@ def run_tests():
     # Import here so path issues surface clearly
     from db.job_repository import JobRepository
     from db.step_repository import StepRepository
-    from core.job_manager import JobManager
+    from jobs.job_manager import JobManager
     from jobs.models import Job, Step
 
     passed = 0
@@ -315,7 +315,10 @@ def run_tests():
     manager.process_job(job_id, executor_retry)
     job = job_repo.get_job(job_id)
     check("retry path: job completed",          job.status == "completed")
-    check("retry path: retry_count incremented", job.retry_count == 1)
+    # Step-level retries should not increment the job-level retry counter.
+    # Job-level retry_count is incremented only by cmd_retry (FR-21).
+    check("retry path: retry_count NOT incremented by step retry",
+          job.retry_count == 0)
     check("retry path: step1 attempt_count=1",
           step_repo.get_steps_for_job(job_id)[0].attempt_count == 1)
 

@@ -185,6 +185,10 @@ def cmd_retry(db: Database, job_repo: JobRepository, step_repo: StepRepository, 
             if step.status != "completed":
                 step_repo.update_step_status(step.id, "pending")
 
+        # Increment job-level retry counter — this is the canonical
+        # "job was retried" event, distinct from per-step attempt retries.
+        job_repo.increment_retry(job_id)
+
         # Transition job: failed -> pending
         job_repo.update_status(job_id, "pending")
 

@@ -15,7 +15,7 @@ from config import StepConfig
 from db.database import Database
 from db.job_repository import JobRepository
 from db.step_repository import StepRepository
-from core.job_manager import JobManager
+from jobs.job_manager import JobManager
 from ingestion.watcher import FileWatcher
 from pipeline.engine import PipelineEngine
 
@@ -139,12 +139,13 @@ class WorkerLoop:
 
         for job in orphans:
             with self.db.transaction():
-                self.job_repo.update_status(job.id, "failed")
                 # Reset all non-completed steps to pending so the job
                 # can be retried cleanly from the beginning
                 for step in self.step_repo.get_steps_for_job(job.id):
                     if step.status != "completed":
                         self.step_repo.update_step_status(step.id, "pending")
+                # Direct running -> pending transition: this state pair
+                # is reserved for crash recovery (see JobManager.VALID_TRANSITIONS).
                 self.job_repo.update_status(job.id, "pending")
 
     # ----------------------------------------

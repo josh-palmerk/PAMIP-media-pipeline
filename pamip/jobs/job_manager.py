@@ -19,9 +19,12 @@ class JobManager:
     """
 
     # Valid state transitions: key -> list of allowed next states
+    # Note: running -> pending is reserved for crash recovery, where a
+    # worker restart finds a job stuck in 'running' from a previous
+    # session and re-queues it. It is not part of normal execution.
     VALID_TRANSITIONS = {
         "pending":   ["running"],
-        "running":   ["completed", "failed"],
+        "running":   ["completed", "failed", "pending"],
         "failed":    ["pending"],
         "completed": []
     }
@@ -157,9 +160,11 @@ class JobManager:
 
                         if attempts < fresh_step.max_attempts:
                             # ---- RETRY CASE ----
-
-                            # Increment job-level retry counter
-                            self.job_repo.increment_retry(job_id)
+                            # Note: job.retry_count tracks job-level retries
+                            # (i.e. cmd_retry invocations), not step retries.
+                            # Step-level retries are tracked per-step via
+                            # attempt_count; incrementing job.retry_count
+                            # here would conflate the two.
 
                             # Reset all non-completed steps to pending
                             for s in steps:

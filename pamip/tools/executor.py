@@ -34,36 +34,44 @@ class ExecutionResult:
     timed_out: bool
 
 
-def _stream_output(stream, buffer: list, label: str):
+def _stream_output(stream, buffer: list, label: str, echo: bool):
     """
     _stream_output
-    Reads lines from a subprocess stream, prints them to console,
-    and appends them to a buffer for later capture.
-    Intended to run in a dedicated thread.
+    Reads lines from a subprocess stream and appends them to a buffer
+    for later capture. Optionally mirrors them to the console as they
+    arrive. Intended to run in a dedicated thread.
 
     Args:
         stream  — readable stream from subprocess (stdout or stderr)
         buffer  (list) — shared list to accumulate output lines
         label   (str)  — prefix for console output, e.g. "[stdout]"
+        echo    (bool) — if True, also print each line to stdout in real time
     """
     for line in iter(stream.readline, ""):
-        stripped = line.rstrip()
-        print(f"{label} {stripped}")
+        if echo:
+            print(f"{label} {line.rstrip()}")
         buffer.append(line)
     stream.close()
 
 
-def run_process(command: list[str], timeout_seconds: int) -> ExecutionResult:
+def run_process(
+    command: list[str],
+    timeout_seconds: int,
+    stream_to_console: bool = True,
+) -> ExecutionResult:
     """
     run_process
     Executes an external command as a subprocess.
-    Streams stdout and stderr to the console while also capturing them.
+    Captures stdout and stderr; optionally also mirrors them to the console
+    as they arrive (useful for live worker logs, undesirable for batch demos).
     Enforces a timeout — sends SIGTERM on expiry, then SIGKILL after
     a grace period if the process has not exited.
 
     Args:
-        command          (list[str]) — command and arguments, e.g. ["ffmpeg", "-i", "input.mp4"]
-        timeout_seconds  (int)       — maximum allowed runtime in seconds
+        command            (list[str]) — command and arguments, e.g. ["ffmpeg", "-i", "input.mp4"]
+        timeout_seconds    (int)       — maximum allowed runtime in seconds
+        stream_to_console  (bool)      — if True, mirror subprocess output to stdout
+                                         in real time. Capture happens regardless.
 
     Returns:
         ExecutionResult — contains success flag, exit code, stdout, stderr, and timed_out flag
@@ -83,12 +91,12 @@ def run_process(command: list[str], timeout_seconds: int) -> ExecutionResult:
     # Stream stdout and stderr in separate threads so neither blocks the other
     stdout_thread = threading.Thread(
         target=_stream_output,
-        args=(process.stdout, stdout_buf, "[stdout]"),
+        args=(process.stdout, stdout_buf, "[stdout]", stream_to_console),
         daemon=True
     )
     stderr_thread = threading.Thread(
         target=_stream_output,
-        args=(process.stderr, stderr_buf, "[stderr]"),
+        args=(process.stderr, stderr_buf, "[stderr]", stream_to_console),
         daemon=True
     )
     stdout_thread.start()
