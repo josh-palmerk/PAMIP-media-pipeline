@@ -4,11 +4,12 @@ Integration tests for JobRepository, StepRepository, and JobManager.
 Uses an in-memory SQLite database — no files written to disk.
 
 Run from the project root:
-    python test_repositories.py
+    python -m tests.test_repositories
 """
 
 import sqlite3
 import sys
+import time
 from contextlib import contextmanager
 
 
@@ -171,12 +172,20 @@ def run_tests():
     updated = job_repo.get_job(job_id)
     check("update_status persists",            updated.status == "completed")
 
-    seed_job(job_repo, "/media/b.mp4")
-    seed_job(job_repo, "/media/c.mp4")
+    # Sleep so created_at differs from prior insert; SQLite CURRENT_TIMESTAMP
+    # has 1-second resolution and list_jobs orders by it descending.
+    time.sleep(1.1)
+    second_id = seed_job(job_repo, "/media/b.mp4")
+    time.sleep(1.1)
+    third_id  = seed_job(job_repo, "/media/c.mp4")
+
     jobs = job_repo.list_jobs()
     check("list_jobs returns list",             isinstance(jobs, list))
     check("list_jobs returns all jobs",         len(jobs) == 3)
     check("list_jobs items are Job instances",  all(isinstance(j, Job) for j in jobs))
+    # list_jobs should return newest first (created_at DESC per repo docstring)
+    check("list_jobs ordered by created_at DESC",
+          [j.id for j in jobs] == [third_id, second_id, job_id])
 
     job_repo.increment_retry(job_id)
     check("increment_retry increments count",
@@ -215,11 +224,18 @@ def run_tests():
     check("get_step correct id",                    step.id == steps[0].id)
     check("get_step missing returns None",          step_repo.get_step(9999) is None)
 
+    # ---- Timestamp behavior on running ----
     step_repo.update_step_status(step.id, "running")
     updated = step_repo.get_step(step.id)
     check("update_step_status status persists",     updated.status == "running")
-    check("update_step_status finished_at set",     updated.finished_at is not None)
+    # Running stamps started_at; finished_at must NOT be set yet
+    check("running transition sets started_at",     updated.started_at is not None)
+    check("running transition does NOT set finished_at",
+          updated.finished_at is None)
 
+    started_at_after_running = updated.started_at
+
+    # ---- Failed transition writes outputs and finished_at ----
     step_repo.update_step_status(
         step.id, "failed",
         exit_code=1,
@@ -234,12 +250,25 @@ def run_tests():
           and updated.stdout == "out"
           and updated.stderr == "err"
           and updated.attempt_count == 1)
+    check("failed transition sets finished_at",     updated.finished_at is not None)
+    check("failed transition preserves started_at",
+          updated.started_at == started_at_after_running)
 
-    # attempt_count unchanged when not provided
+    # ---- Pending transition clears finished_at ----
     step_repo.update_step_status(step.id, "pending")
     updated = step_repo.get_step(step.id)
     check("update_step_status attempt_count unchanged when omitted",
           updated.attempt_count == 1)
+    check("pending transition preserves started_at",
+          updated.started_at == started_at_after_running)
+    check("pending transition clears finished_at",
+          updated.finished_at is None)
+
+    # ---- Re-entering running on retry doesn't reset started_at ----
+    step_repo.update_step_status(step.id, "running")
+    updated = step_repo.get_step(step.id)
+    check("re-entering running preserves original started_at",
+          updated.started_at == started_at_after_running)
 
     # steps isolated between jobs
     job_id_2 = seed_job(job_repo, "/media/other.mp4")
@@ -259,10 +288,14 @@ def run_tests():
         manager = JobManager(db, job_repo, step_repo)
         return db, job_repo, step_repo, manager
 
-    # -- Happy path: all steps succeed --
+    # -- Happy path: 3 steps, all succeed (catches off-by-one in step iteration) --
     db, job_repo, step_repo, manager = make_manager()
     job_id = seed_job(job_repo)
-    seed_steps(db, step_repo, job_id)
+    seed_steps(db, step_repo, job_id, [
+        {"step_name": "step1", "max_attempts": 1},
+        {"step_name": "step2", "max_attempts": 1},
+        {"step_name": "step3", "max_attempts": 1},
+    ])
 
     def executor_success(step, job):
         return {"success": True, "exit_code": 0, "stdout": "ok", "stderr": ""}
@@ -270,18 +303,18 @@ def run_tests():
     manager.process_job(job_id, executor_success)
     job = job_repo.get_job(job_id)
     steps = step_repo.get_steps_for_job(job_id)
-    check("happy path: job completed",          job.status == "completed")
-    check("happy path: all steps completed",
-          all(s.status == "completed" for s in steps))
-    check("happy path: stdout captured",
-          all(s.stdout == "ok" for s in steps))
+    check("happy path: job completed",          job.status == "completed")     # FR-6
+    check("happy path: all 3 steps completed",
+          all(s.status == "completed" for s in steps))                          # FR-9, FR-10
+    check("happy path: stdout captured for all steps",
+          all(s.stdout == "ok" for s in steps))                                 # FR-14
 
-    # -- Failure: step fails and exhausts retries --
+    # -- Terminal failure: exhaust retries --
     db, job_repo, step_repo, manager = make_manager()
     job_id = seed_job(job_repo)
     seed_steps(db, step_repo, job_id, [
-        {"step_name": "step1", "max_attempts": 1},
-        {"step_name": "step2", "max_attempts": 1},
+        {"step_name": "step1", "max_attempts": 2},
+        {"step_name": "step2", "max_attempts": 2},
     ])
 
     def executor_fail_always(step, job):
@@ -290,37 +323,82 @@ def run_tests():
     manager.process_job(job_id, executor_fail_always)
     job = job_repo.get_job(job_id)
     steps = step_repo.get_steps_for_job(job_id)
-    check("terminal failure: job failed",       job.status == "failed")
+    check("terminal failure: job failed",       job.status == "failed")          # FR-6
     check("terminal failure: step1 failed",     steps[0].status == "failed")
-    check("terminal failure: step2 not run",    steps[1].status == "pending")
-    check("terminal failure: stderr captured",  steps[0].stderr == "boom")
+    check("terminal failure: step2 not run",    steps[1].status == "pending")    # FR-11
+    check("terminal failure: stderr captured",  steps[0].stderr == "boom")       # FR-14
+    # attempt_count must reflect every attempt actually made
+    check("terminal failure: attempt_count == max_attempts",
+          steps[0].attempt_count == steps[0].max_attempts)                       # FR-8
 
-    # -- Retry: step fails once then succeeds --
+    # -- Retry path: step 2 of 3 fails once then succeeds --
+    # Three steps and a mid-pipeline failure exercise the retry restart loop:
+    # step 1 must already be completed and stay that way, step 3 must run after
+    # step 2 finally succeeds. Catches off-by-one or skip bugs in the restart.
     db, job_repo, step_repo, manager = make_manager()
     job_id = seed_job(job_repo)
     seed_steps(db, step_repo, job_id, [
-        {"step_name": "step1", "max_attempts": 2},
+        {"step_name": "step1", "max_attempts": 1},
         {"step_name": "step2", "max_attempts": 2},
+        {"step_name": "step3", "max_attempts": 1},
     ])
 
-    attempt_tracker = {"step1": 0}
+    attempt_tracker = {"step2": 0}
 
     def executor_retry(step, job):
-        if step.step_name == "step1":
-            attempt_tracker["step1"] += 1
-            if attempt_tracker["step1"] < 2:
+        if step.step_name == "step2":
+            attempt_tracker["step2"] += 1
+            if attempt_tracker["step2"] < 2:
                 return {"success": False, "exit_code": 1, "stdout": "", "stderr": "retry me"}
         return {"success": True, "exit_code": 0, "stdout": "ok", "stderr": ""}
 
     manager.process_job(job_id, executor_retry)
     job = job_repo.get_job(job_id)
+    steps = step_repo.get_steps_for_job(job_id)
     check("retry path: job completed",          job.status == "completed")
     # Step-level retries should not increment the job-level retry counter.
     # Job-level retry_count is incremented only by cmd_retry (FR-21).
     check("retry path: retry_count NOT incremented by step retry",
           job.retry_count == 0)
-    check("retry path: step1 attempt_count=1",
-          step_repo.get_steps_for_job(job_id)[0].attempt_count == 1)
+    check("retry path: all 3 steps completed",
+          all(s.status == "completed" for s in steps))                           # FR-9
+    check("retry path: step1 ran exactly once",
+          steps[0].attempt_count == 1)
+    check("retry path: step2 attempt_count=2",
+          steps[1].attempt_count == 2)
+    check("retry path: step3 ran exactly once after step2 retry",
+          steps[2].attempt_count == 1)                                           # FR-9
+
+    # -- Retry path: FIRST step retries (no prior completed steps) --
+    # Distinct case from the mid-pipeline retry above. Earlier code reset all
+    # non-completed steps to pending using a stale snapshot, which clobbered
+    # already-completed steps on a mid-pipeline retry. With no prior steps,
+    # this case used to pass even when the bug was present — keeping it as a
+    # regression guard against any future variant of the same issue.
+    db, job_repo, step_repo, manager = make_manager()
+    job_id = seed_job(job_repo)
+    seed_steps(db, step_repo, job_id, [
+        {"step_name": "step1", "max_attempts": 2},
+        {"step_name": "step2", "max_attempts": 1},
+    ])
+
+    first_step_tracker = {"step1": 0}
+
+    def executor_first_step_retry(step, job):
+        if step.step_name == "step1":
+            first_step_tracker["step1"] += 1
+            if first_step_tracker["step1"] < 2:
+                return {"success": False, "exit_code": 1, "stdout": "", "stderr": "retry"}
+        return {"success": True, "exit_code": 0, "stdout": "ok", "stderr": ""}
+
+    manager.process_job(job_id, executor_first_step_retry)
+    steps = step_repo.get_steps_for_job(job_id)
+    check("first-step retry: step1 attempt_count=2",
+          steps[0].attempt_count == 2)
+    check("first-step retry: step2 ran exactly once",
+          steps[1].attempt_count == 1)
+    check("first-step retry: job completed",
+          job_repo.get_job(job_id).status == "completed")
 
     # -- Invalid transition raises --
     db, job_repo, step_repo, manager = make_manager()

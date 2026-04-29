@@ -5,7 +5,7 @@ Uses simple shell commands to simulate success, failure, and timeout
 without requiring any external media tools.
 
 Run from the project root:
-    python test_executor.py
+    python -m tests.test_executor
 """
 
 import sys
@@ -26,14 +26,19 @@ def run_tests():
             print(f"  FAIL  {name}")
             failed += 1
 
+    # Use the running interpreter's path so these tests don't depend on
+    # `python` being on PATH (e.g. systems with only `python3`, or venvs).
+    PY = sys.executable
+
     # ----------------------------------------
     # Success Case
     # ----------------------------------------
     print("\n--- Success ---")
 
     result = run_process(
-        ["python", "-c", "print('hello stdout')"],
-        timeout_seconds=10
+        [PY, "-c", "print('hello stdout')"],
+        timeout_seconds=10,
+        stream_to_console=False,
     )
     check("returns ExecutionResult",        isinstance(result, ExecutionResult))
     check("success is True",               result.success)
@@ -47,8 +52,9 @@ def run_tests():
     print("\n--- Failure ---")
 
     result = run_process(
-        ["python", "-c", "import sys; print('err', file=sys.stderr); sys.exit(1)"],
-        timeout_seconds=10
+        [PY, "-c", "import sys; print('err', file=sys.stderr); sys.exit(1)"],
+        timeout_seconds=10,
+        stream_to_console=False,
     )
     check("success is False",              not result.success)
     check("exit_code is 1",               result.exit_code == 1)
@@ -61,9 +67,10 @@ def run_tests():
     print("\n--- Output Capture ---")
 
     result = run_process(
-        ["python", "-c",
+        [PY, "-c",
          "import sys; print('out line'); print('err line', file=sys.stderr)"],
-        timeout_seconds=10
+        timeout_seconds=10,
+        stream_to_console=False,
     )
     check("stdout captured",              "out line" in result.stdout)
     check("stderr captured",              "err line" in result.stderr)
@@ -74,12 +81,13 @@ def run_tests():
     print("\n--- Timeout ---")
 
     result = run_process(
-        ["python", "-c", "import time; time.sleep(30)"],
-        timeout_seconds=2
+        [PY, "-c", "import time; time.sleep(30)"],
+        timeout_seconds=2,
+        stream_to_console=False,
     )
-    check("success is False on timeout",  not result.success)
-    check("exit_code is -1 on timeout",   result.exit_code == -1)
-    check("timed_out is True",            result.timed_out)
+    check("success is False on timeout",  not result.success)               # FR-15
+    check("exit_code is -1 on timeout",   result.exit_code == -1)           # FR-15
+    check("timed_out is True",            result.timed_out)                 # FR-15
 
     # ----------------------------------------
     # Multiline output preserved
@@ -87,8 +95,9 @@ def run_tests():
     print("\n--- Multiline Output ---")
 
     result = run_process(
-        ["python", "-c", "for i in range(5): print(f'line {i}')"],
-        timeout_seconds=10
+        [PY, "-c", "for i in range(5): print(f'line {i}')"],
+        timeout_seconds=10,
+        stream_to_console=False,
     )
     check("all lines captured",           all(f"line {i}" in result.stdout for i in range(5)))
 

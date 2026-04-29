@@ -94,7 +94,6 @@ class WorkerLoop:
         Blocks until stop() is called.
         """
         log.info("Worker starting.")
-        print("Worker starting.")
 
         self._recover_orphaned_jobs()
 
@@ -104,12 +103,10 @@ class WorkerLoop:
                 self._iteration()
             except Exception as e:
                 log.error(f"Unhandled error in worker loop: {e}", exc_info=True)
-                print(f"[worker] Error: {e}")
 
             time.sleep(self.poll_interval)
 
         log.info("Worker stopped.")
-        print("Worker stopped.")
 
     def stop(self):
         """
@@ -135,7 +132,6 @@ class WorkerLoop:
             return
 
         log.warning(f"Found {len(orphans)} orphaned job(s) from previous session. Re-queuing.")
-        print(f"[worker] Recovering {len(orphans)} orphaned job(s).")
 
         for job in orphans:
             with self.db.transaction():
@@ -171,7 +167,6 @@ class WorkerLoop:
                     for s in self.pipeline
                 ])
             log.info(f"Created job {job_id} for file: {file_path}")
-            print(f"[worker] New file detected: {file_path} -> job {job_id}")
 
         # 2. Remove references to threads that have finished
         with self._lock:
@@ -204,7 +199,6 @@ class WorkerLoop:
 
             thread.start()
             log.info(f"Dispatched job {job.id} to thread {thread.name}")
-            print(f"[worker] Dispatched job {job.id}.")
 
     # ----------------------------------------
     # Job Execution
@@ -229,7 +223,6 @@ class WorkerLoop:
 
         try:
             log.info(f"Job {job_id} started.")
-            print(f"[worker] Job {job_id} started.")
 
             manager.process_job(job_id, self.engine.execute_step)
 
@@ -241,11 +234,9 @@ class WorkerLoop:
                 self.output_dir.mkdir(parents=True, exist_ok=True)
                 shutil.move(str(src), str(dst))
                 log.info(f"Job {job_id} completed. File moved to {dst}")
-                print(f"[worker] Job {job_id} completed. File moved to {dst}")
 
         except Exception as e:
             log.error(f"Job {job_id} failed with exception: {e}", exc_info=True)
-            print(f"[worker] Job {job_id} failed: {e}")
 
         finally:
             db.close()

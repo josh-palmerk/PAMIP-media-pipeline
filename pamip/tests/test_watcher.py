@@ -118,13 +118,19 @@ def run_tests():
         results = watcher.scan()
         check("uppercase extensions accepted",       len(results) == 2)
 
-    # Subdirectories are not scanned
+    # Subdirectories are not scanned — proven by including a sibling top-level
+    # file: if recursion ever leaks in, the count would be 2, not 1.
     with tempfile.TemporaryDirectory() as tmp:
         watcher = make_watcher(tmp)
         subdir = Path(tmp) / "subdir"
         subdir.mkdir()
         (subdir / "nested.mp4").touch()
-        check("subdirectories not scanned",          watcher.scan() == [])
+        touch(tmp, "top.mp4")
+        results = watcher.scan()
+        names = {r.name for r in results}
+        check("subdir test: top-level file detected", "top.mp4" in names)
+        check("subdir test: nested file ignored",     "nested.mp4" not in names)
+        check("subdir test: exactly one file",        len(results) == 1)
 
     # Non-existent watch directory returns empty list gracefully
     watcher = FileWatcher(watch_dir="/nonexistent/path", allowed_extensions=[".mp4"])

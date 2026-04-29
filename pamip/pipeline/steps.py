@@ -25,6 +25,7 @@ No changes to core orchestration logic are required. (FR-12)
 """
 
 from pathlib import Path
+import sys
 from jobs.models import Job
 
 
@@ -95,8 +96,9 @@ def _noop_command() -> list[str]:
     _noop_command
     Returns a command that immediately exits with code 0.
     Used when a step is not applicable to the input file type.
+    Uses sys.executable so we don't depend on `python` being on PATH.
     """
-    return ["python", "-c", ""]
+    return [sys.executable, "-c", ""]
 
 
 # ----------------------------------------
@@ -134,7 +136,6 @@ def handle_transcode(file_path: str, output_dir: str, job: Job, options: dict) -
 
     return [
         "ffmpeg",
-        "-loglevel", "quiet",
         "-i",   str(input_path),
         "-c:v", "libx264",      # video codec: H.264
         "-c:a", "aac",          # audio codec: AAC
@@ -168,7 +169,6 @@ def handle_thumbnail(file_path: str, output_dir: str, job: Job, options: dict) -
 
     return [
         "ffmpeg",
-        "-loglevel", "quiet",
         "-i",       str(input_path),
         "-ss",      "00:00:05",     # seek to 5 seconds
         "-vframes", "1",            # capture one frame
@@ -203,7 +203,6 @@ def handle_image_convert(file_path: str, output_dir: str, job: Job, options: dic
 
     return [
         "ffmpeg",
-        "-loglevel", "quiet",
         "-i",   str(input_path),
         "-q:v", "2",            # JPEG quality: 1 (best) – 31 (worst); 2 is near-lossless
         "-y",
@@ -250,7 +249,6 @@ def handle_image_compress(file_path: str, output_dir: str, job: Job, options: di
 
     return [
         "ffmpeg",
-        "-loglevel", "quiet",
         "-i",   str(input_path),
         "-q:v", "4",            # slightly more compression than image_convert
         "-y",

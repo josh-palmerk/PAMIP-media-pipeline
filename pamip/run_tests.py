@@ -23,6 +23,11 @@ TEST_MODULES = [
     "tests.test_watcher",
     "tests.test_executor",
     "tests.test_repositories",
+    "tests.test_loop",
+    "tests.test_steps",
+    "tests.test_engine",
+    "tests.test_commands",
+    "tests.test_config",
 ]
 
 

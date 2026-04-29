@@ -166,10 +166,14 @@ class JobManager:
                             # attempt_count; incrementing job.retry_count
                             # here would conflate the two.
 
-                            # Reset all non-completed steps to pending
-                            for s in steps:
-                                if s.status != "completed":
-                                    self.step_repo.update_step_status(s.id, "pending")
+                            # Reset only the just-failed step back to pending
+                            # so the outer loop can re-run it. Earlier completed
+                            # steps must NOT be touched: clobbering them with
+                            # 'pending' would (a) regress committed work and
+                            # (b) cause them to re-run, double-counting attempts.
+                            # Later steps are already pending from create_steps,
+                            # so they need no action.
+                            self.step_repo.update_step_status(step.id, "pending")
 
                             restart_required = True
                             break  # break for-loop, outer while will restart
@@ -181,12 +185,16 @@ class JobManager:
 
                     else:
                         # ---- SUCCESS CASE ----
+                        # attempt_count tracks every execution, not just failures.
+                        # Without this, a step that succeeded after a retry would
+                        # show attempts=1 instead of attempts=2.
                         self.step_repo.update_step_status(
                             step.id,
                             "completed",
                             exit_code=result.get("exit_code"),
                             stdout=result.get("stdout"),
                             stderr=result.get("stderr"),
+                            attempt_count=attempts,
                         )
 
             if restart_required:

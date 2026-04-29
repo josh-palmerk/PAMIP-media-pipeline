@@ -1,7 +1,7 @@
 # To-do List
 
 ## General
-[] Ensure OS & pathing is universally compatible
+[x] Ensure OS & pathing is universally compatible
 [x] Make different steps run for different file types; different pipelines, essentially
 [x] Make this^ not hard-coded
 [] Make the processing of same-named files a config flag set to false by default (since the process involves moving them)
@@ -14,8 +14,8 @@
 
 
 ## Restructuring
-[] remove job_manager.py in favor of jobs/manager.py
-[] remove core/
+[x] remove job_manager.py in favor of jobs/manager.py
+[x] remove core/
 [] move config.py into config/
-[] move tests to tests/
+[x] move tests to tests/
 [x] remove worker/scheduler.py

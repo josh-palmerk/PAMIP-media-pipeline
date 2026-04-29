@@ -5,7 +5,11 @@ Designed for polling-based monitoring with an interface that supports
 swapping in event-based monitoring (SR-1) without changing callers.
 """
 
+import logging
 from pathlib import Path
+
+
+log = logging.getLogger(__name__)
 
 
 class FileWatcher:
@@ -48,7 +52,7 @@ class FileWatcher:
         event-based subclass would override this method only.
         """
         if not self.watch_dir.exists():
-            print(f"Warning: watch directory does not exist: {self.watch_dir}")
+            log.warning(f"Watch directory does not exist: {self.watch_dir}")
             return []
 
         new_files = []

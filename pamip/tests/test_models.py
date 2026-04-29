@@ -157,7 +157,10 @@ def run_tests():
     check("stderr captured",              step.stderr == "error msg")
 
     print(f"\nResults: {passed} passed, {failed} failed\n")
+    return failed
 
 
 if __name__ == "__main__":
-    run_tests()
+    import sys
+    failures = run_tests()
+    sys.exit(1 if failures else 0)

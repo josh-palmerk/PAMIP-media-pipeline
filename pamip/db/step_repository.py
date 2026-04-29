@@ -97,18 +97,61 @@ class StepRepository:
         update_step_status
         Updates a step's status and optionally its output fields.
         attempt_count is only updated if explicitly provided (via COALESCE).
-        finished_at is always set to the current timestamp on update.
+
+        Timestamp behaviour:
+            running   -> stamps started_at on the FIRST running transition;
+                         preserves it across retry restarts (COALESCE).
+                         finished_at is left untouched.
+            completed -> stamps finished_at; preserves started_at.
+            failed    -> stamps finished_at; preserves started_at.
+            pending   -> clears finished_at so a re-run does not appear to be
+                         "already finished" while it is queued. started_at
+                         is preserved so the original first-run timestamp
+                         survives across retries.
         """
-        self.db.execute(
-            """
-            UPDATE steps
-            SET status=?,
-                exit_code=?,
-                stdout=?,
-                stderr=?,
-                attempt_count=COALESCE(?, attempt_count),
-                finished_at=CURRENT_TIMESTAMP
-            WHERE id=?;
-            """,
-            (status, exit_code, stdout, stderr, attempt_count, step_id)
-        )
+        if status == "running":
+            self.db.execute(
+                """
+                UPDATE steps
+                SET status=?,
+                    exit_code=?,
+                    stdout=?,
+                    stderr=?,
+                    attempt_count=COALESCE(?, attempt_count),
+                    started_at=COALESCE(started_at, CURRENT_TIMESTAMP)
+                WHERE id=?;
+                """,
+                (status, exit_code, stdout, stderr, attempt_count, step_id)
+            )
+
+        elif status in ("completed", "failed"):
+            self.db.execute(
+                """
+                UPDATE steps
+                SET status=?,
+                    exit_code=?,
+                    stdout=?,
+                    stderr=?,
+                    attempt_count=COALESCE(?, attempt_count),
+                    finished_at=CURRENT_TIMESTAMP
+                WHERE id=?;
+                """,
+                (status, exit_code, stdout, stderr, attempt_count, step_id)
+            )
+
+        else:
+            # pending — clear finished_at so a queued retry doesn't display
+            # the previous run's completion timestamp in `pamip show`.
+            self.db.execute(
+                """
+                UPDATE steps
+                SET status=?,
+                    exit_code=?,
+                    stdout=?,
+                    stderr=?,
+                    attempt_count=COALESCE(?, attempt_count),
+                    finished_at=NULL
+                WHERE id=?;
+                """,
+                (status, exit_code, stdout, stderr, attempt_count, step_id)
+            )
